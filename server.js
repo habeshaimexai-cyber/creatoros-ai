@@ -50,7 +50,7 @@ function finish(res, message, success = false) {
   res.type('html').send('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>CreatorOS</title><main style="font-family:system-ui;max-width:520px;margin:80px auto;padding:24px"><h1>' + (success ? 'YouTube verbunden' : 'Verbindung fehlgeschlagen') + '</h1><p>' + message + '</p><p>Du kannst dieses Fenster schließen und zu CreatorOS zurückgehen.</p></main>');
 }
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'CreatorOS API', youtubeConfigured: configured() }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'CreatorOS API', youtubeConfigured: configured(), missing: required.filter((key) => !process.env[key]) }));
 
 app.post('/oauth/youtube/start', async (req, res) => {
   if (!configured()) return res.status(503).json({ error: 'Die sichere YouTube-Verbindung wird noch eingerichtet.' });
