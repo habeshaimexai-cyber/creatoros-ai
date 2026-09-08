@@ -38,5 +38,5 @@ async function loadConnections(){
     });
   }catch{connectionStatus.textContent='Verbindungsstatus konnte nicht geladen werden.'}
 }
-sb.auth.onAuthStateChange(()=>setTimeout(loadConnections,0));loadConnections();
+window.addEventListener('message',event=>{if(event.origin!==API_BASE||event.data?.type!=='creatoros-oauth')return;if(event.data.success){connectionStatus.textContent='YouTube wurde verbunden ✓';setTimeout(loadConnections,500)}else{connectionStatus.textContent='Die Verbindung wurde nicht abgeschlossen.'}});\nsb.auth.onAuthStateChange(()=>setTimeout(loadConnections,0));loadConnections();
 </script></body></html>
