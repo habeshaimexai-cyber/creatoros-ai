@@ -151,6 +151,7 @@ app.get('/health', (_req, res) =>
   res.json({
     status: 'ok',
     service: 'CreatorOS API',
+    version: '2026-09-08-youtube-sync',
     youtubeConfigured: has(youtubeRequired),
     metaConfigured: has(metaRequired),
   })
