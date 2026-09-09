@@ -1,13 +1,22 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 
 const app=express();
+const rootDir=path.dirname(fileURLToPath(import.meta.url));
 const WEB_URL=process.env.WEB_ORIGIN||'https://habeshaimexai-cyber.github.io/creatoros-ai/';
 const WEB_ORIGIN=new URL(WEB_URL).origin;
 app.use(cors({origin:(o,cb)=>cb(null,!o||o===WEB_ORIGIN),methods:['GET','POST']}));
 app.use(express.json({limit:'100kb'}));
+
+// CreatorOS-Oberfläche direkt über die Render-Adresse ausliefern.
+app.get('/',(_req,res)=>res.sendFile(path.join(rootDir,'index.html')));
+app.get('/config.js',(_req,res)=>res.sendFile(path.join(rootDir,'config.js')));
+app.get('/privacy.html',(_req,res)=>res.sendFile(path.join(rootDir,'privacy.html')));
+app.get('/terms.html',(_req,res)=>res.sendFile(path.join(rootDir,'terms.html')));
 
 const core=['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','TOKEN_ENCRYPTION_KEY'];
 const configured=keys=>[...core,...keys].every(k=>Boolean(process.env[k]));
