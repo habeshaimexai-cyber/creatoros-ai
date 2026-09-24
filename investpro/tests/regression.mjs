@@ -104,3 +104,18 @@ assert.ok(element('personalScenarios').innerHTML.includes('2026-08-01'));assert.
 assert.ok(element('personalStress').textContent.includes('Ohne Eingabe'));assert.ok(!page.match(/id="personalShock"[^>]*value=/));
 console.log('PASS: snapshots are immutable on rerender, explicit atomic replacement, stable CHF values, storage failure, real-date chart points, dated historical windows and no automatic stress assumption.');
 
+// Display, settings and input-validation fixes.
+assert.ok(!run("money(-1234.5678912,'CHF')").includes('567891'));assert.ok(run("money(-1234.5678912,'CHF')").includes('.57'));assert.ok(run("money(0.123456,'USD')").includes('0.123456'));
+assert.equal(run('changeColor(null)'),'var(--text-muted)');assert.equal(run('changeColor(-1)'),'var(--accent-red)');
+fields({scannerRegion:'',scannerDirection:'',scannerLimit:'20',scannerRefresh:'0'});
+run("fetch=async()=>({ok:true,json:async()=>({exchangeCount:1,scanned:1,requested:1,failed:0,timestamp:Date.now(),results:[{symbol:'AAPL',name:'Apple',exchange:'Nasdaq',region:'Amerika',price:187.4199981689453,currency:'USD',change:null,direction:'Steigend',confidence:40,reason:'r',opportunity:'o',risk:'x'}]})})");
+await run('runGlobalScanner()');const scan=element('scannerResults').innerHTML;assert.ok(!scan.includes('null'));assert.ok(!scan.includes('187.4199'));assert.ok(scan.includes('187.42'));assert.ok(scan.includes('nicht verfügbar'));
+run("appData.settings.rates={CHF:1,EUR:.95,USD:1.2,GBP:.8};appData.settings.ratesSource='Yahoo Finance';appData.settings.ratesTimestamp=123");
+fields({s_currency:'EUR',rate_EUR:'0.95',rate_USD:'1.2',rate_GBP:'0.8'});run('updateDisplayCurrency()');assert.equal(run('appData.settings.currency'),'EUR');assert.equal(run('appData.settings.ratesSource'),'Yahoo Finance');assert.equal(run('appData.settings.ratesTimestamp'),123);
+run('updateSettings()');assert.equal(run('appData.settings.ratesSource'),'Yahoo Finance');
+fields({rate_USD:'-5'});run('updateSettings()');assert.equal(run('appData.settings.rates.USD'),1.2);assert.equal(run('appData.settings.ratesSource'),'Yahoo Finance');
+fields({rate_USD:'1.1'});run('updateSettings()');assert.equal(run('appData.settings.rates.USD'),1.1);assert.equal(run('appData.settings.ratesSource'),'Manuell');
+run("appData.settings.currency='CHF';appData.holdings=[];appData.transactions=[]");alerts=[];
+fields({t_date:'2999-01-01',t_type:'Kauf',t_ticker:'AAPL',t_shares:1,t_price:100,t_fee:0,t_currency:'CHF'});run('addTransaction()');assert.equal(run('appData.holdings.length'),0);assert.ok(alerts.at(-1).includes('Zukunft'));
+fields({t_date:''});run('addTransaction()');assert.equal(run('appData.holdings.length'),1);assert.equal(run('appData.transactions[0].date'),run('localToday()'));
+console.log('PASS: negative amounts, unknown daily change, rounded scanner prices, FX provenance on currency switch, invalid manual rates and future transaction dates.');

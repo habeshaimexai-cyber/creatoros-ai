@@ -43,6 +43,19 @@ Der Prüfserver bindet an http://localhost:3000. API-Aufrufe benötigen Internet
 - Der Dashboard-KPI zeigt die historische Datenbasis statt eines vermeintlichen zukünftigen Depotwerts.
 - Der Stresstest startet leer. Erst eine eigene Eingabe berechnet ein ausdrücklich hypothetisches Ergebnis.
 
+## Korrekturen der Claude-Prüfung (24.09.2026)
+
+- Negative Beträge (z. B. Stresstest, Verluste) wurden mit bis zu sechs Nachkommastellen angezeigt (`CHF-1'234.567891`). Nur Beträge unter 1 im Absolutwert erhalten jetzt zusätzliche Stellen.
+- Der Weltmarkt-Scanner zeigte bei fehlender Tagesänderung „+null% heute“ und ungerundete Rohkurse (z. B. `187.4199981689453`). Jetzt formatierte Kurse und „Tagesänderung nicht verfügbar“.
+- Unbekannte Tagesänderungen und offener Gewinn/Verlust werden neutral statt grün bzw. rot eingefärbt.
+- Ein Wechsel der Anzeigewährung markierte online abgerufene Wechselkurse fälschlich als „Manuell“ und löschte deren Zeitstempel. Anzeigewährung und Wechselkurse werden jetzt getrennt gespeichert.
+- Ungültige manuelle Wechselkurse (leer, 0, negativ) wurden stillschweigend durch 0.0001 bzw. Standardwerte ersetzt. Sie werden jetzt abgelehnt; der bisherige Kurs bleibt erhalten.
+- Transaktionen mit Datum in der Zukunft werden abgelehnt. Vorgabedaten für Notizen, Transaktionen und Dividenden sowie der Dividenden-KPI verwenden den lokalen Kalendertag statt UTC (zwischen 0 und 2 Uhr Schweizer Zeit wurde sonst der Vortag vorgeschlagen). Tagesstände bleiben wie dokumentiert UTC-basiert.
+- Downloads (CSV, Backup) widerrufen die Objekt-URL erst nach dem Start des Downloads; in Safari/Firefox konnte der Download sonst fehlschlagen.
+- Dieselbe Backup-Datei kann nach einer abgelehnten Auswahl (z. B. > 5 MB) erneut gewählt werden.
+- `npm run validate` scheiterte unter Node.js 20 (README-Mindestversion), weil `dist/server/index.js` ohne `package.json` als CommonJS geladen wurde. Das Artefakt wird jetzt wie im Kommentar vorgesehen über eine Data-URL als ES-Modul geprüft.
+- Neue Regressionstests in `tests/regression.mjs` decken alle Punkte ab (ausser Download-Verhalten, das einen echten Browser braucht; ein Chromium-Ladetest ohne Skriptfehler wurde manuell durchgeführt).
+
 ## Rechenmodell und Grenzen
 
 Die historischen Modellfenster verwenden **heutige Gewichte**, hypothetisches tägliches Rebalancing und datengleiche historische CHF-Wechselkurse. Sie rekonstruieren nicht den tatsächlichen früheren Besitz des Nutzers. Gebühren, Steuern und Zahlungsflüsse fehlen im Modell. Fenster überlappen und sind keine unabhängigen Stichproben. Künftige Kurse oder 99,9 % Genauigkeit werden nicht garantiert.
