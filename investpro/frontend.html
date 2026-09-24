@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvestPro · Aktien & Portfolio</title><meta name="description" content="Aktien suchen, Kursverläufe und technische Signale prüfen und das eigene Portfolio verwalten."><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230f172a%27/%3E%3Cpath d=%27M6 23L13 15L19 18L26 8%27 stroke=%27%2338bdf8%27 stroke-width=%273%27 fill=%27none%27/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --sidebar-width: 250px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    html, body { height:100%; overflow:hidden; }
+    body { background-color: var(--bg-dark); color: var(--text-main); display: flex; min-height: 100vh; min-height:100dvh; }
+
+    aside { width: var(--sidebar-width); background-color: #0b1120; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+
+    .brand { padding: 20px; font-size: 1.4rem; font-weight: 700; color: var(--accent-blue); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+
+    .nav-list { list-style: none; overflow-y: auto; padding: 10px 0; flex: 1; }
+
+    .nav-item { padding: 11px 20px; display: flex; align-items: center; gap: 12px; color: var(--text-muted); cursor: pointer; font-size: 0.92rem; transition: all 0.15s; border-left: 4px solid transparent; }
+    .nav-item:hover, .nav-item.active { background-color: var(--bg-card); color: var(--accent-blue); border-left-color: var(--accent-blue); }
+
+    .sidebar-footer { padding: 14px 20px; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-muted); }
+
+    main { flex:1; display:flex; flex-direction:column; height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden; min-width:0; scroll-behavior:smooth; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+
+    header { padding: 15px 30px; background-color: var(--bg-dark); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
+
+    .search-bar { position: relative; width: 300px; }
+    .search-bar input { width: 100%; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); outline: none; font-size: 0.9rem; }
+    .search-bar input:focus { border-color: var(--accent-blue); }
+    .search-dropdown { position: absolute; top: 42px; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; z-index: 30; display: none; }
+    .search-dropdown.show { display: block; }
+    .search-dropdown-item { padding: 10px 12px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; }
+    .search-dropdown-item:last-child { border-bottom: none; }
+    .search-dropdown-item:hover { background: var(--bg-card-hover); }
+    .stock-results { margin-top:8px; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; display:none; max-height:260px; overflow-y:auto; }
+    .stock-results.show { display:block; }
+    .stock-result { width:100%; padding:10px 12px; border:0; border-bottom:1px solid var(--border-color); background:var(--bg-dark); color:var(--text-main); text-align:left; cursor:pointer; display:flex; justify-content:space-between; gap:12px; }
+    .stock-result:hover { background:var(--bg-card-hover); }
+
+    .content-area { padding: 30px; display: flex; flex-direction: column; gap: 22px; max-width: 1100px; width: 100%; }
+
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; }
+    .card > div[id$="Wrap"] { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .card h3 { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 600; }
+    .card .value { font-size: 1.6rem; font-weight: 700; }
+    .card .trend { font-size: 0.85rem; margin-top: 5px; }
+    .trend.positive { color: var(--accent-green); }
+    .trend.negative { color: var(--accent-red); }
+
+    .chart-container { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; position: relative; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    canvas { width: 100% !important; height: 280px !important; }
+
+    .view-section { display: none; flex-direction: column; gap: 20px; }
+    .view-section.active { display: flex; }
+
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; background: #3b82f633; color: var(--accent-blue); font-weight: 600; }
+    .badge.green { background: #22c55e33; color: var(--accent-green); }
+    .badge.purple { background: #a855f733; color: var(--accent-purple); }
+
+    .section-intro { color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; }
+
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+    .field label { font-size: 0.72rem; color: var(--text-muted); }
+    .field input, .field select { padding: 8px 10px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 0.85rem; outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--accent-blue); }
+
+    .btn { background: var(--accent-blue); color: #041224; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+    .btn:hover { opacity: 0.88; }
+    .btn.secondary { background: var(--bg-card-hover); color: var(--text-main); }
+    .btn.danger { background: var(--accent-red); color: #2a0a0a; }
+    .btn.small { padding: 5px 10px; font-size: 0.75rem; }
+
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data-table th { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 0.72rem; padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+    table.data-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-color); }
+    table.data-table tr:last-child td { border-bottom: none; }
+    table.data-table input.inline-price { width: 90px; padding: 5px 7px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-main); font-size: 0.8rem; }
+
+    .empty-state { text-align: center; padding: 34px 20px; color: var(--text-muted); font-size: 0.88rem; }
+
+    .risk-gauge { display: flex; align-items: baseline; gap: 10px; }
+    .risk-gauge .num { font-size: 2.4rem; font-weight: 700; }
+    .risk-bar-track { height: 8px; border-radius: 4px; background: var(--bg-dark); overflow: hidden; margin-top: 10px; }
+    .risk-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent-green), var(--accent-amber), var(--accent-red)); }
+
+    .ai-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; font-size: 0.88rem; line-height: 1.65; white-space: pre-wrap; min-height: 60px; }
+    .ai-disclaimer { font-size: 0.72rem; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 4px; }
+
+    .storage-banner { background: #f59e0b22; border: 1px solid var(--accent-amber); color: var(--accent-amber); padding: 8px 14px; border-radius: 6px; font-size: 0.78rem; display: none; }
+    .storage-banner.show { display: block; }
+    .live-banner { background:#0c4a6e66; border:1px solid #0284c7; color:#bae6fd; padding:10px 14px; border-radius:8px; font-size:.82rem; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .market-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; }
+    .market-card { background:linear-gradient(145deg,#172238,#111b2e); border:1px solid var(--border-color); border-radius:10px; padding:14px; min-height:102px; }
+    .market-card .symbol { color:var(--text-muted); font-size:.75rem; margin-bottom:5px; }
+    .market-card .market-price { font-size:1.18rem; font-weight:750; }
+    .market-card .change { margin-top:5px; font-size:.78rem; }
+    .scanner-toolbar { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+    .scanner-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .scanner-stat { background:var(--bg-dark); border:1px solid var(--border-color); border-radius:8px; padding:12px; }
+    .scanner-stat b { display:block; font-size:1.15rem; margin-top:3px; }
+    .scanner-card { background:var(--bg-dark); border:1px solid var(--border-color); border-radius:10px; padding:15px; display:grid; grid-template-columns:minmax(190px,1.2fr) minmax(105px,.55fr) minmax(125px,.65fr) minmax(240px,1.5fr) auto; gap:14px; align-items:center; }
+    .scanner-card + .scanner-card { margin-top:10px; }
+    .scanner-signal { font-size:1rem; font-weight:750; }
+    .scanner-reason { color:var(--text-muted); font-size:.8rem; line-height:1.5; }
+    .spinner { display:inline-block; width:13px; height:13px; border:2px solid #ffffff55; border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .link-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .menu-btn { display:none; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); border-radius:8px; width:42px; height:42px; font-size:1.25rem; cursor:pointer; }
+    .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(2,6,23,.72); z-index:39; }
+    .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .status { font-size:.72rem; padding:4px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:5px; }
+    .status.ok { color:#86efac; background:#14532d66; }
+    .status.warn { color:#fde68a; background:#78350f66; }
+    .modal { display:none; position:fixed; inset:0; z-index:60; place-items:center; padding:18px; background:rgba(2,6,23,.78); }
+    .modal.show { display:grid; }
+    .modal-card { width:min(760px,100%); max-height:90vh; overflow:auto; background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:20px; box-shadow:0 24px 80px #0008; }
+
+    @media (max-width: 820px) {
+      body { overflow:hidden; }
+      aside { position:fixed; left:0; top:0; bottom:0; z-index:40; transform:translateX(-105%); transition:transform .22s ease; box-shadow:16px 0 40px #0008; }
+      aside.open { transform:translateX(0); }
+      .sidebar-overlay.show { display:block; }
+      .menu-btn { display:inline-grid; place-items:center; flex-shrink:0; }
+      main { height:100vh; height:100dvh; overflow-y:auto; overflow-x:hidden; }
+      header { padding:12px 16px; gap:10px; }
+      header h2 { font-size:1.05rem; flex:1; }
+      .search-bar { width:min(44vw,240px); }
+      .content-area { padding:16px; gap:16px; }
+      .grid-4 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .card, .chart-container { padding:15px; }
+      .card .value { font-size:1.25rem; }
+      .form-row { align-items:stretch; }
+      .field { flex:1 1 145px; min-width:0; }
+      .form-row > .btn { width:100%; }
+      .scanner-card { grid-template-columns:1fr 1fr; }
+      .scanner-card .scanner-reason, .scanner-card .scanner-action { grid-column:1/-1; }
+      canvas { height:235px !important; }
+      table.data-table { min-width:680px; }
+    }
+    @media (max-width: 480px) {
+      .grid-4 { grid-template-columns:1fr; }
+      .search-bar { width:42px; }
+      .search-bar input { width:42px; padding-left:12px; transition:width .2s; }
+      .search-bar input:focus { position:absolute; right:0; top:-20px; width:calc(100vw - 72px); }
+      .scanner-summary { grid-template-columns:1fr; }
+      .scanner-card { grid-template-columns:1fr; }
+      .scanner-card .scanner-reason, .scanner-card .scanner-action { grid-column:auto; }
+    }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+    a{color:#7dd3fc} button{font:inherit} button:disabled{opacity:.55;cursor:wait} :focus-visible{outline:2px solid #7dd3fc;outline-offset:3px}
+    .content-area{max-width:1440px}.brand{letter-spacing:-.03em}.card{border-radius:14px}.card h3,.field label,.section-intro,.btn,.data-table th{font-size:.875rem!important}.ai-box{white-space:normal;overflow-wrap:anywhere}.quote-meta{font-size:.8125rem;color:var(--text-muted);line-height:1.6;margin-top:14px}.stock-heading{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.stock-heading h2{font-size:1.35rem;margin:7px 0}.stock-price{font-size:2rem;font-weight:750;letter-spacing:-.025em;margin:8px 0}.signal-panel{border-left:3px solid #38bdf8;padding-left:16px;line-height:1.8}.price-spark{display:block;width:100%;height:auto;max-height:270px;background:#101b30;border-radius:8px}.chart-axis{display:flex;justify-content:space-between;color:var(--text-muted);font-size:.8125rem;margin:8px 0}.detail-block{border-top:1px solid var(--border-color);padding:20px 0;margin-top:18px}.indicator-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.indicator-grid>div{background:#17243a;border:1px solid var(--border-color);padding:14px;border-radius:8px}.indicator-grid span{display:block;color:var(--text-muted);font-size:.875rem}.indicator-grid b{display:block;font-size:1.25rem;margin-top:5px}.news-link{display:block;padding:14px 0;text-decoration:none;border-bottom:1px solid var(--border-color);line-height:1.5}.news-link small{display:block;color:var(--text-muted);margin-top:5px}.popular-stocks{margin-top:12px}.market-card{color:var(--text-main);text-align:left;cursor:pointer}.market-card:hover,.catalog-item:hover{border-color:#38bdf8;background:#172c43}.market-card>span,.market-card>b,.market-card>small{display:block}.market-card small{font-size:.75rem;color:var(--text-muted);margin-top:8px;line-height:1.45}.catalog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px;max-height:550px;overflow:auto}.catalog-item{display:flex;flex-direction:column;gap:5px;text-align:left;padding:14px;border:1px solid var(--border-color);border-radius:10px;background:var(--bg-dark);color:var(--text-main);cursor:pointer}.catalog-item b{color:#7dd3fc}.catalog-item small{color:var(--text-muted)}.watch-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--border-color)}[data-chart-range][aria-pressed=true]{background:#075985;color:white}#appToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#075985;border:1px solid #38bdf8;padding:14px 22px;border-radius:10px;z-index:100;max-width:90vw}.search-dropdown{max-height:70vh;overflow-y:auto}.stock-result small{font-size:.8125rem;color:var(--text-muted)}
+    @media(max-width:820px){.catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.indicator-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field{min-width:0!important}.search-bar{width:150px}header{flex-wrap:wrap}.section-intro{line-height:1.65}}
+    @media(max-width:480px){.search-bar{width:100%;order:3}.search-bar input,.search-bar input:focus{position:static;width:100%}.search-dropdown{top:42px}.market-grid{grid-template-columns:1fr 1fr}.catalog-grid{grid-template-columns:1fr}.stock-price{font-size:1.7rem}.signal-panel{width:100%}table.data-table{min-width:560px}.form-row .btn{white-space:normal}.content-area{padding:12px}#quickStockInput{min-width:0}}
+    @media print{html,body,main{height:auto!important;overflow:visible!important;background:white!important;color:black!important}aside,header,.live-banner,.btn,.sidebar-overlay{display:none!important}.view-section.active{display:block}.card,.chart-container{break-inside:avoid;background:white!important;color:black!important}.section-intro{color:#444!important}.content-area{padding:0;width:100%}.table-scroll{overflow:visible!important}}
+
+  .source-row{display:grid;grid-template-columns:1fr auto;gap:6px 16px;padding:12px 0;border-bottom:1px solid var(--border)}.source-row small{grid-column:1/-1;color:var(--text-muted);font-size:14px}.chart-header .link-row{flex-wrap:wrap;gap:8px}[data-chart-range][aria-pressed="true"]{background:#0c4a6e;color:#fff;border-color:#38bdf8}#detailLiveStatus{overflow-wrap:anywhere}.personal-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0}.personal-metric{padding:16px;border:1px solid var(--border);border-radius:12px}.personal-metric b{display:block;font-size:24px;margin:8px 0}.allocation-row{margin:14px 0}.allocation-line{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px}.allocation-track{height:8px;background:#334155;border-radius:8px;overflow:hidden}.allocation-fill{height:100%;background:#38bdf8}.personal-warning{padding:12px;margin:10px 0;border-left:3px solid #f59e0b;background:#172333}.personal-table{overflow-x:auto}.personal-table table{min-width:620px}details.card summary{cursor:pointer;font-weight:600;font-size:16px}.analysis-nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.portfolio-onboarding{padding:24px 0;text-align:left}.portfolio-onboarding h3,.portfolio-start h3{font-size:1.35rem!important;margin:10px 0}.portfolio-onboarding p,.portfolio-start p{margin:12px 0;line-height:1.6}.eyebrow{font-size:12px;font-weight:700;color:#7dd3fc;letter-spacing:.08em}.setup-steps{display:flex;gap:20px;flex-wrap:wrap;margin:22px 0}.setup-steps span{display:flex;align-items:center;gap:8px}.setup-steps b{display:grid;place-items:center;border:1px solid #38bdf8;width:28px;height:28px;border-radius:50%;color:#7dd3fc}.holding-dialog{color:#f8fafc;background:#111e32;border:1px solid #335271;border-radius:18px;padding:24px;width:min(700px,94vw);max-height:90vh;overflow:auto;margin:auto;box-shadow:0 24px 100px #0008}.holding-dialog::backdrop{background:#020617b8}.holding-dialog [hidden]{display:none!important}.wizard-top{display:flex;justify-content:space-between;align-items:start;margin-bottom:24px;gap:15px}.wizard-top h2{margin-top:8px;font-size:24px}.wizard-search{display:flex;gap:10px;margin:10px 0}.wizard-search input{flex:1;min-width:0}.holding-dialog input,.holding-dialog select{padding:12px;border:1px solid #475569;border-radius:8px;background:#0b1423;color:white;font:inherit}.wizard-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.wizard-fields .field{min-width:0}.wizard-fields input,.wizard-fields select{width:100%}.wizard-result{display:flex;align-items:center;justify-content:space-between;gap:15px;text-align:left;padding:14px;width:100%;background:#13283f;border:1px solid #314a65;color:white;border-radius:9px;margin:8px 0;cursor:pointer;font-size:15px}.wizard-result small{display:block;color:#a9bad0;margin-top:5px}.wizard-result:hover{border-color:#38bdf8}.wizard-quote{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:18px;background:#0b293e;border:1px solid #176085;border-radius:12px;margin:18px 0}.wizard-quote strong{font-size:24px}.wizard-quote small{flex-basis:100%;color:#b4c9da}.wizard-quote p{margin-top:6px}.wizard-status{margin-top:18px;padding:12px;background:#091421;border-radius:8px;line-height:1.5}.wizard-value{font-size:20px;font-weight:700;margin:18px 0}.wizard-help{margin-top:20px}.wizard-help summary{cursor:pointer}.wizard-help p{margin:10px 0}#hwResults{max-height:300px;overflow:auto}#hwSuccess p{margin:16px 0;line-height:1.6}.btn{min-height:42px}.inline-price{max-width:130px}.add-position{white-space:nowrap}@media(max-width:650px){header{flex-wrap:wrap}.holding-dialog{padding:18px}.wizard-fields{grid-template-columns:1fr}.analysis-nav .btn{flex:1 1 auto}.setup-steps{gap:12px}.add-position{font-size:13px!important}.portfolio-onboarding{padding:12px 0}}
+</style>
+  <script src="/assets/chart.js"></script>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMenu()"></div>
+  <aside id="sidebar">
+    <div class="brand">🚀 InvestPro</div>
+    <ul class="nav-list">
+      <li class="nav-item active" data-view="dashboard" onclick="switchView('dashboard', this)">📊 Dashboard</li>
+      <li class="nav-item" data-view="portfolio" onclick="switchView('portfolio', this)">💼 Portfolio</li>
+      <li class="nav-item" data-view="suche" onclick="switchView('suche', this)">🔍 Suche</li>
+      <li class="nav-item" data-view="livekurse" onclick="switchView('livekurse', this)">📈 Marktübersicht</li>
+      <li class="nav-item" data-view="scanner" onclick="switchView('scanner', this)">🌍 Aktien-Scanner</li>
+      <li class="nav-item" data-view="notizen" onclick="switchView('notizen', this)">📝 Notizen</li>
+      <li class="nav-item" data-view="ki" onclick="switchView('ki', this)">📈 Aktienanalyse</li>
+      <li class="nav-item" data-view="assistent" onclick="switchView('assistent', this)">🔔 Marktbeobachtung</li>
+      <li class="nav-item" data-view="profi" onclick="switchView('profi', this)">🧪 Profi-Analyse</li>
+      <li class="nav-item" data-view="transaktionen" onclick="switchView('transaktionen', this)">🔄 Transaktionen</li>
+      <li class="nav-item" data-view="dividenden" onclick="switchView('dividenden', this)">💰 Dividenden</li>
+      <li class="nav-item" data-view="watchlist" onclick="switchView('watchlist', this)">⭐ Watchlist</li>
+      <li class="nav-item" data-view="performance" onclick="switchView('performance', this)">📉 Performance</li>
+      <li class="nav-item" data-view="risiko" onclick="switchView('risiko', this)">⚠️ Risiko</li>
+      <li class="nav-item" data-view="diversifikation" onclick="switchView('diversifikation', this)">🧩 Diversifikation</li>
+      <li class="nav-item" data-view="prognose" onclick="switchView('prognose', this)">🔮 Prognose</li>
+      <li class="nav-item" data-view="export" onclick="switchView('export', this)">📄 Excel / CSV</li>
+      <li class="nav-item" data-view="backup" onclick="switchView('backup', this)">💾 Backup</li>
+      <li class="nav-item" data-view="einstellungen" onclick="switchView('einstellungen', this)">⚙️ Einstellungen</li>
+    </ul>
+    <div class="sidebar-footer">Portfolio auf diesem Gerät gespeichert. Kursabfragen gehen an den Datenanbieter.</div>
+  </aside>
+
+  <main>
+    <header>
+      <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" aria-label="Menü öffnen" aria-expanded="false">☰</button>
+      <h2 id="page-title">Dashboard</h2><button class="btn small add-position" onclick="openHoldingWizard()">＋ Position erfassen</button>
+      <div class="search-bar">
+        <input type="text" id="globalSearch" placeholder="Position suchen (Name oder Ticker)...">
+        <div class="search-dropdown" id="searchDropdown"></div>
+      </div>
+    </header>
+
+    <div class="content-area">
+      <div class="storage-banner" id="storageBanner">⚠️ Speichern ist in dieser Ansicht nicht dauerhaft möglich – deine Eingaben bleiben nur für diese Sitzung erhalten.</div>
+      <div class="live-banner"><span id="marketStatus">Marktdaten werden geprüft …</span><button class="btn small" id="refreshAllBtn" onclick="refreshAllPrices()">Kurse aktualisieren</button></div>
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="view-section active">
+        <div class="card" style="border-color:#0284c7;box-shadow:0 0 0 1px #0284c722;">
+          <div class="chart-header"><div><h3 style="font-size:1.05rem;color:var(--text-main);margin-bottom:4px;">🔎 Aktie finden und analysieren</h3><p class="section-intro">Name oder Ticker eingeben – zum Beispiel NVIDIA, Apple, Tesla, Nestlé oder NVDA.</p></div><span class="status ok" id="quickStockStatus">Bereit</span></div>
+          <div class="form-row"><div class="field" style="flex:1;min-width:220px"><label>Aktie suchen</label><input id="quickStockInput" autocomplete="off" placeholder="Firmenname oder Ticker …" oninput="scheduleQuickStockSearch()" onkeydown="if(event.key==='Enter')showQuickStock()"><div class="stock-results" id="quickStockResults"></div></div><button class="btn" id="quickStockButton" onclick="showQuickStock()">Aktie anzeigen</button></div>
+          <div class="link-row popular-stocks"><button class="btn secondary small" onclick="selectQuickStock('NVDA')">NVIDIA</button><button class="btn secondary small" onclick="selectQuickStock('AAPL')">Apple</button><button class="btn secondary small" onclick="selectQuickStock('TSLA')">Tesla</button><button class="btn secondary small" onclick="selectQuickStock('NESN.SW')">Nestlé</button></div><div class="live-banner" style="margin-top:12px"><span id="quickMonitorInfo">Live-Beobachtung ist aus.</span><button class="btn small secondary" id="quickMonitorButton" onclick="toggleQuickMonitor()">Beobachtung starten</button></div>
+          <div id="quickStockOutput" style="display:none;margin-top:14px" class="ai-box"></div>
+        </div>
+        <div class="grid-4">
+          <div class="card"><h3>Gesamtwert</h3><div class="value" id="kpiTotal">–</div><div class="trend" id="kpiTotalTrend"></div></div>
+          <div class="card"><h3>Dividende (dieser Monat)</h3><div class="value" id="kpiDiv">–</div><div class="trend" id="kpiDivTrend">Aus deinen Einträgen</div></div>
+          <div class="card"><h3>Historische Schwankung · p.a.</h3><div class="value" id="kpiRisk">–</div><div class="trend" id="kpiRiskTrend"></div></div>
+          <div class="card"><h3>Historische Datenbasis</h3><div class="value" id="kpiForecast">–</div><div class="trend" id="kpiForecastTrend"></div></div>
+        </div>
+        <div class="card">
+          <div class="chart-header"><div><h3 style="font-size:1rem;color:var(--text-main);margin-bottom:4px;">Marktübersicht</h3><p class="section-intro">Aktuelle Marktpreise – kein Portfolio-Eintrag nötig</p></div><button class="btn secondary small" onclick="loadMarketOverview()">Aktualisieren</button></div>
+          <div class="market-grid" id="marketGrid"><div class="empty-state"><span class="spinner"></span> Märkte werden geladen …</div></div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-header"><h3>Gespeicherter Depotwert · CHF</h3><span class="badge">Keine bereinigte Rendite</span></div>
+          <div id="overviewChart"></div>
+          <div class="empty-state" id="overviewEmpty" style="display:none;">Noch keine Snapshots gespeichert. Geh zu <b>Performance</b> und speichere deinen ersten Stand.</div>
+        </div>
+      </section>
+
+      <!-- KI-MARKTASSISTENT -->
+      <section id="assistent" class="view-section">
+        <div class="card">
+          <div class="chart-header"><div><h3 style="font-size:1rem;color:var(--text-main);margin-bottom:4px;">Marktbeobachtung</h3><p class="section-intro">Prüft alle 30 Minuten wichtige Märkte und deine Positionen anhand regelbasierter Trendsignale.</p></div><span class="status ok" id="assistantStatus">● Bereit</span></div>
+          <div class="link-row"><button class="btn" id="assistantRunBtn" onclick="runMarketAssistant()">Jetzt analysieren</button><button class="btn secondary" onclick="enableAssistantNotifications()">Benachrichtigungen erlauben</button></div>
+          <p class="section-intro" style="margin-top:12px;">Nächste automatische Prüfung: <b id="nextAssistantRun">nach dem ersten Start</b>. Die App muss im Browser geöffnet bleiben.</p>
+        </div>
+        <div class="card"><h3 style="margin-bottom:14px;">Aktuelle Marktsignale</h3><div id="assistantSignals"><div class="empty-state">Starte die erste Analyse.</div></div></div>
+        <div class="ai-disclaimer">Marktsignale sind keine sichere Vorhersage und keine persönliche Kauf- oder Verkaufsempfehlung.</div>
+      </section>
+
+      <!-- PROFI ANALYST -->
+      <section id="profi" class="view-section">
+        <div class="card"><div class="chart-header"><div><h3 style="font-size:1rem;color:var(--text-main);margin-bottom:4px;">Professioneller Portfolio-Analyst</h3><p class="section-intro">Risiko, technische Signale, Szenarien und priorisierte Massnahmen</p></div><div class="link-row"><button class="btn" id="proRunBtn" onclick="runProAnalysis()">Portfolio analysieren</button><button class="btn secondary" onclick="window.print()">Bericht als PDF</button></div></div></div>
+        <div class="grid-4"><div class="card"><h3>Historische Schwankung</h3><div class="value" id="proRisk">–</div><div class="trend" id="proRiskText"></div></div><div class="card"><h3>Konzentration grösste Position</h3><div class="value" id="proConcentration">–</div><div class="trend">Anteil am Gesamtportfolio</div></div><div class="card"><h3>Szenario Markt −15 %</h3><div class="value" id="proCrash">–</div><div class="trend negative">Geschätzter Portfolioeffekt</div></div><div class="card"><h3>Unrealisierter Gewinn</h3><div class="value" id="proGain">–</div><div class="trend" id="proGainPct"></div></div></div>
+        <div class="card"><h3 style="margin-bottom:14px;">Technische Analyse je Position</h3><div id="proPositions"><div class="empty-state">Klicke auf „Portfolio analysieren“.</div></div></div>
+        <div class="card"><h3 style="margin-bottom:14px;">Szenarien</h3><div id="proScenarios"></div></div>
+        <div class="card"><h3 style="margin-bottom:14px;">Priorisierter Massnahmenplan</h3><div id="proPlan"></div></div>
+        <div class="ai-disclaimer">Die Analyse basiert auf verfügbaren Kurs- und Nachrichtendaten. Sie ersetzt keine persönliche Finanzberatung, Steuerberatung oder garantierte Vorhersage.</div>
+      </section>
+
+      <!-- PORTFOLIO -->
+      <section id="portfolio" class="view-section">
+        <div class="card portfolio-start"><span class="eyebrow">DEIN PORTFOLIO</span><h3>Deine Position in wenigen Schritten</h3><p>Aktie suchen → deine Stückzahl eingeben → Auswertung öffnen.</p><div class="link-row"><button class="btn" onclick="openHoldingWizard()">＋ Erste oder weitere Position erfassen</button><button class="btn secondary" onclick="jumpTo('backup')">Vorhandenes Backup importieren</button></div><p class="section-intro">Name, Kurs und Handelswährung werden automatisch geladen. Ein Kaufpreis ist für Risiko und Diversifikation nicht erforderlich. Es werden keine Wertpapiere gekauft.</p></div>
+        <details class="card" id="advancedHolding"><summary>Erweiterte Eingabe · manuelle Kurse</summary>
+          <h3 style="margin-bottom:14px;">Position hinzufügen</h3>
+          <div class="form-row">
+            <div class="field"><label>Name</label><input id="p_name" placeholder="z.B. Nestlé"></div>
+            <div class="field"><label>Ticker</label><input id="p_ticker" placeholder="z.B. NESN"></div>
+            <div class="field"><label>Asset-Klasse</label>
+              <select id="p_class"><option>Aktien</option><option>ETF</option><option>Anleihen</option><option>Krypto</option><option>Bargeld</option><option>Sonstiges</option></select>
+            </div>
+            <div class="field"><label>Anzahl</label><input id="p_shares" type="number" step="any" placeholder="10"></div>
+            <div class="field"><label>Kaufpreis</label><input id="p_buy" type="number" step="any" placeholder="95.50"></div>
+            <div class="field"><label>Aktueller Kurs</label><input id="p_current" type="number" step="any" placeholder="102.00"></div>
+            <div class="field"><label>Handelswährung</label><select id="p_currency"><option>CHF</option><option>EUR</option><option>USD</option><option>GBP</option></select></div>
+            <button class="btn" onclick="addHolding()">Hinzufügen</button>
+          </div>
+        </details>
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Deine Positionen</h3><p class="section-intro">Bewertung in deiner Anzeigewährung mit den aktuellen Umrechnungskursen aus den Einstellungen. Historische Wechselkurse werden nicht rekonstruiert.</p>
+          <div id="portfolioTableWrap"></div>
+        </div>
+      </section>
+
+      <!-- SUCHE -->
+      <section id="suche" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:6px;">Position suchen</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Durchsucht dein Portfolio, deine Watchlist und internationale Online-Marktdaten.</p>
+          <div class="field" style="min-width:260px;"><input id="sucheInput" placeholder="z.B. Nestlé, Apple, Bitcoin..." oninput="scheduleOnlineSearch()"></div>
+          <div id="sucheResults" style="margin-top:16px;"></div>
+        </div>
+      </section>
+
+      <!-- LIVE-KURSE -->
+      <section id="livekurse" class="view-section">
+        <div class="card">
+          <div class="chart-header"><div><h3 style="font-size:1rem;color:var(--text-main);margin-bottom:4px;">Märkte im Überblick</h3><p class="section-intro">Aktienindizes, Krypto, Edelmetalle, Energie und Devisen</p></div><button class="btn secondary small" onclick="loadMarketOverview()">Alle aktualisieren</button></div>
+          <div class="market-grid" id="marketGridFull"><div class="empty-state"><span class="spinner"></span> Weltmärkte werden geladen …</div></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:6px;">Kurse aktualisieren</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Ruft zuletzt verfügbare Anbieter-Kurse ab. Die Abdeckung und Verzögerung hängen von der jeweiligen Börse ab. Für Krypto nutze z.B. <b>BTC-USD</b>, für Schweizer Aktien oft <b>NESN.SW</b>.</p>
+          <div class="link-row" style="margin-bottom:14px;"><button class="btn" onclick="refreshAllPrices()">Alle Kurse abrufen</button><button class="btn secondary" onclick="refreshExchangeRates()">Wechselkurse aktualisieren</button></div>
+          <div id="kurseTableWrap"></div>
+        </div>
+<div class="card"><div class="chart-header"><div><h3>Einzelaktien entdecken</h3><p class="section-intro">36 internationale Aktien. Weitere Titel findest du über die Suche.</p></div><button class="btn secondary small" onclick="jumpTo('suche')">Alle Titel suchen</button></div><div class="form-row"><div class="field"><label for="catalogRegion">Region</label><select id="catalogRegion" onchange="renderCatalog()"><option value="">Alle Regionen</option><option value="americas">Amerika</option><option value="europe">Europa</option><option value="asia">Asien & Pazifik</option></select></div><div class="field" style="flex:1"><label for="catalogFilter">Auswahl filtern</label><input id="catalogFilter" placeholder="Name oder Ticker" oninput="renderCatalog()"></div></div><div id="stockCatalog" class="catalog-grid">Aktienauswahl wird geladen …</div></div>
+      </section>
+
+      <!-- NOTIZEN -->
+      <section id="notizen" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Neue Notiz</h3>
+          <div class="form-row">
+            <div class="field"><label>Datum</label><input id="n_date" type="date"></div>
+            <div class="field" style="flex:1; min-width:220px;"><label>Text</label><input id="n_text" placeholder="z.B. Link zu einem Artikel, eigene Beobachtung, Erinnerung..."></div>
+            <button class="btn" onclick="addNote()">Speichern</button>
+          </div>
+        </div>
+        <div class="card"><h3 style="margin-bottom:14px;">Deine Notizen</h3><div id="notesList"></div></div>
+      </section>
+
+      <!-- KI-ANALYSE -->
+      <section id="ki" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:6px;">Aktienanalyse & Kursverlauf</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Funktioniert ohne Portfolio. Bewertet kurzfristiges Momentum, Trend und Schwankung anhand von Kursdaten. Verfügbare Nachrichten stehen separat darunter.</p>
+          <div class="form-row"><div class="field"><label>Bekannter Markt</label><select id="forecastSymbol" onchange="selectedForecastSymbol='';document.getElementById('forecastTicker').value='';runAiAnalysis()"><option value="^NDX">Nasdaq 100</option><option value="^IXIC">Nasdaq Composite</option><option value="^GSPC">S&P 500</option><option value="^DJI">Dow Jones</option><option value="^SSMI">SMI</option><option value="^GDAXI">DAX</option><option value="BTC-USD">Bitcoin</option><option value="ETH-USD">Ethereum</option><option value="GC=F">Gold</option><option value="CL=F">Öl WTI</option></select></div><div class="field" style="flex:1;min-width:220px"><label>Einzelne Aktie suchen</label><input id="forecastTicker" autocomplete="off" placeholder="Name eingeben: Apple, Tesla, Nestlé …" oninput="scheduleForecastSearch()" onkeydown="if(event.key==='Enter')runAiAnalysis()"><div class="stock-results" id="forecastStockResults"></div></div><button class="btn" id="kiButton" onclick="runAiAnalysis()">Prognose anzeigen</button></div>
+          <div style="margin-top:16px;" class="ai-box" id="kiOutput">Wähle einen Markt und starte die Prognose.</div>
+          <div class="ai-disclaimer">Regelbasierte technische Analyse, keine KI-Kursvorhersage. Signalstärke ist keine Wahrscheinlichkeit. Kursdaten können verzögert sein. <a href="https://help.yahoo.com/kb/SLN2310.html" target="_blank" rel="noopener noreferrer">Datenquellen & Verzögerungen</a></div>
+        </div>
+      </section>
+
+      <!-- WELTWEITER AKTIEN-SCANNER -->
+      <section id="scanner" class="view-section">
+        <div class="card">
+          <div class="chart-header"><div><h3 style="font-size:1rem;color:var(--text-main);margin-bottom:4px;">🌍 Weltweiter Aktien-Scanner</h3><p class="section-intro">Durchsucht aktuelle Marktbewegungen an internationalen Börsen und sortiert auffällige Aktien nach Signalstärke.</p></div><span class="status ok" id="scannerStatus">● Bereit</span></div>
+          <div class="scanner-toolbar">
+            <div class="field"><label>Region</label><select id="scannerRegion"><option value="all">Weltweit</option><option value="americas">Amerika</option><option value="europe">Europa</option><option value="asia">Asien & Pazifik</option></select></div>
+            <div class="field"><label>Richtung</label><select id="scannerDirection"><option value="all">Steigend & fallend</option><option value="up">Steigende Chancen</option><option value="down">Fallende Risiken</option></select></div>
+            <div class="field"><label>Anzahl</label><select id="scannerLimit"><option>10</option><option selected>20</option><option>30</option></select></div>
+            <div class="field"><label>Automatisch aktualisieren</label><select id="scannerRefresh" onchange="scheduleScannerRefresh()"><option value="0">Aus</option><option value="60" selected>Jede Minute</option><option value="300">Alle 5 Minuten</option><option value="900">Alle 15 Minuten</option></select></div>
+            <button class="btn" id="scannerButton" onclick="runGlobalScanner()">Weltmarkt analysieren</button>
+          </div>
+          <div class="scanner-summary"><div class="scanner-stat"><span class="section-intro">Abgedeckte Börsen</span><b id="scannerExchanges">–</b></div><div class="scanner-stat"><span class="section-intro">Analysierte Kandidaten</span><b id="scannerCount">–</b></div><div class="scanner-stat"><span class="section-intro">Live-Status</span><b id="scannerTime">Noch nicht gestartet</b><small class="section-intro" id="scannerNext"></small></div></div>
+        </div>
+        <div class="card">
+          <div id="scannerResults" class="empty-state">Klicke auf „Weltmarkt analysieren“, um internationale Aktienchancen und Risiken zu sehen.</div>
+          <div class="ai-disclaimer">Der Scanner prüft eine feste Auswahl von 36 internationalen Aktien. Er kann nicht jede weltweit gelistete Aktie gleichzeitig oder sekundengenau überwachen. Signale beruhen auf festen Rechenregeln. Signalstärke von 0 bis 100 ist keine Eintrittswahrscheinlichkeit.</div>
+        </div>
+      </section>
+
+      <!-- TRANSAKTIONEN -->
+      <section id="transaktionen" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Neue Transaktion buchen</h3>
+          <div class="form-row">
+            <div class="field"><label>Datum</label><input id="t_date" type="date"></div>
+            <div class="field"><label>Typ</label><select id="t_type"><option>Kauf</option><option>Verkauf</option></select></div>
+            <div class="field"><label>Ticker</label><input id="t_ticker" placeholder="z.B. NESN"></div>
+            <div class="field"><label>Anzahl</label><input id="t_shares" type="number" step="any"></div>
+            <div class="field"><label>Preis / Stück</label><input id="t_price" type="number" step="any"></div>
+            <div class="field"><label>Handelswährung</label><select id="t_currency"><option>CHF</option><option>EUR</option><option>USD</option><option>GBP</option></select></div><div class="field"><label>Gebühren</label><input id="t_fee" type="number" step="any" min="0" value="0"></div>
+            <div class="field"><label>Notiz</label><input id="t_note" placeholder="optional"></div>
+            <button class="btn" onclick="addTransaction()">Buchen</button>
+          </div>
+          <p class="section-intro" style="margin-top:10px;">Ein Kauf legt automatisch eine neue Position an oder erhöht eine bestehende (mit neu berechnetem Durchschnittspreis). Ein Verkauf reduziert die Stückzahl.</p>
+        </div>
+        <div class="card"><h3 style="margin-bottom:14px;">Verlauf</h3><div id="transTableWrap"></div></div>
+      </section>
+
+      <!-- DIVIDENDEN -->
+      <section id="dividenden" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Dividende erfassen</h3>
+          <div class="form-row">
+            <div class="field"><label>Datum</label><input id="d_date" type="date"></div>
+            <div class="field"><label>Ticker</label><input id="d_ticker" placeholder="z.B. NESN"></div>
+            <div class="field"><label>Betrag</label><input id="d_amount" type="number" step="any" min="0"></div><div class="field"><label>Währung</label><select id="d_currency"><option>CHF</option><option>EUR</option><option>USD</option><option>GBP</option></select></div>
+            <div class="field"><label>Notiz</label><input id="d_note" placeholder="optional"></div>
+            <button class="btn" onclick="addDividend()">Speichern</button>
+          </div>
+        </div>
+        <div class="card"><h3 style="margin-bottom:14px;">Verlauf</h3><div id="divTableWrap"></div></div>
+      </section>
+
+      <!-- WATCHLIST -->
+      <section id="watchlist" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Zur Watchlist hinzufügen</h3>
+          <div class="form-row">
+            <div class="field"><label>Name</label><input id="w_name" placeholder="z.B. Novo Nordisk"></div>
+            <div class="field"><label>Ticker</label><input id="w_ticker" placeholder="z.B. NOVO-B"></div>
+            <div class="field" style="flex:1; min-width:180px;"><label>Notiz</label><input id="w_note" placeholder="Warum beobachtest du das?"></div>
+            <button class="btn" onclick="addWatch()">Hinzufügen</button>
+          </div>
+        </div>
+        <div class="card"><h3 style="margin-bottom:14px;">Deine Watchlist</h3><div id="watchTableWrap"></div></div>
+      </section>
+
+      <!-- PERFORMANCE -->
+      <section id="performance" class="view-section">
+        <div class="card"><div class="chart-header"><div><span class="eyebrow">DEIN GESPEICHERTER VERLAUF</span><h3>Depotwert · CHF</h3></div><button class="btn" onclick="saveSnapshot()">Heutigen Stand speichern / ersetzen</button></div>
+        <p class="section-intro">Pro Tag wird beim Öffnen mit erfassten Positionen einmal ein Stand gesichert. Weitere Änderungen überschreiben ihn nur über den Button. Die App ergänzt keine vergangenen Tage.</p>
+        <div id="perfMetrics" class="personal-metrics"></div><div id="perfChart"></div>
+        <p class="section-intro">Jeder Punkt ist ein gespeicherter Depotwert in CHF. Käufe, Verkäufe, Einzahlungen und Wechselkurse verändern den Wert. Ohne vollständige Zahlungsflüsse ist daraus keine Anlagerendite berechenbar. Deshalb werden die Punkte nicht zu einer Renditekurve verbunden.</p></div>
+        <div class="card"><h3>Gespeicherte Stände & Herkunft</h3><p class="section-intro">Ältere Stände ohne Herkunft bleiben erhalten, sind aber nicht nachträglich überprüfbar. Speicherzeit ist nicht Kurszeit.</p><div id="snapTableWrap" style="overflow-x:auto"></div></div>
+      </section>
+
+      <!-- RISIKO -->
+      <section id="risiko" class="view-section"><div class="analysis-nav" aria-label="Portfolio-Auswertungen"><button class="btn small secondary" onclick="jumpTo('diversifikation')">Diversifikation</button><button class="btn small " onclick="jumpTo('risiko')">Risiko</button><button class="btn small secondary" onclick="jumpTo('prognose')">Prognose</button><button class="btn small secondary" onclick="openHoldingWizard()">＋ Position</button></div><div class="card"><div class="chart-header"><h3>Dein Portfolio-Risiko</h3><button class="btn" onclick="refreshPersonalPortfolio()">Meine Marktdaten aktualisieren</button></div><p class="section-intro personal-status">Nur deine erfassten Positionen. Keine automatische Broker-Verbindung.</p><div id="personalRisk"></div></div><div class="card"><h3>Dein Anlageprofil</h3><p class="section-intro">Diese Angaben bestimmen deine persönlichen Warnhinweise. Es werden keine Ziele für dich angenommen.</p><div class="form-row"><div class="field"><label for="profileGoal">Dein Ziel</label><select id="profileGoal"><option value="">Bitte wählen</option><option value="preserve">Kapital erhalten</option><option value="grow">Vermögen aufbauen</option><option value="income">Regelmässige Erträge</option></select></div><div class="field"><label for="profileMonths">Anlagehorizont in Monaten</label><input id="profileMonths" type="number" min="1" max="600" placeholder="z. B. 60"></div><div class="field"><label for="profileLoss">Verlustgrenze in %</label><input id="profileLoss" type="number" min="1" max="100" placeholder="z. B. 15"></div><div class="field"><label for="profilePosition">Maximaler Anteil je Position in %</label><input id="profilePosition" type="number" min="1" max="100" placeholder="z. B. 20"></div><button class="btn" onclick="saveInvestorProfile()">Profil speichern</button></div><p class="section-intro" id="profileStatus" role="status"></p></div><details class="card"><summary>Berechnung und Grenzen</summary><p class="section-intro">Bis zu fünf Jahre Yahoo-Kursdaten. Bereinigte Kurse, wenn die ganze Reihe verfügbar ist, sonst Schlusskurse. Fremdwährungen werden mit historischen Tageskursen in CHF umgerechnet. Nur gemeinsame Kurstage gehen in das Modell ein; Börsenschlusszeiten können voneinander abweichen. Heute erfasste Gewichte werden an jedem Modelltag wiederhergestellt. Gebühren, Steuern, tatsächliche Käufe/Verkäufe und künftige Einzahlungen fehlen. Das ist keine tatsächliche historische Depotperformance.</p><p class="section-intro">Mindestens 60 gemeinsame Beobachtungen sind nötig. Fehlende Positionen werden nicht als risikolos behandelt. Sektor-, Länder- und ETF-Durchschau sind nicht verfügbar. Historische Schwankungen und Szenarien sind keine Prognosewahrscheinlichkeiten oder Verlustobergrenzen.</p><a href="https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/portfolio-risk-return-part-1" target="_blank" rel="noopener noreferrer">Methoden: Portfolio-Risiko und Korrelation ↗</a></details></section>
+
+      <!-- DIVERSIFIKATION -->
+      <section id="diversifikation" class="view-section"><div class="analysis-nav" aria-label="Portfolio-Auswertungen"><button class="btn small " onclick="jumpTo('diversifikation')">Diversifikation</button><button class="btn small secondary" onclick="jumpTo('risiko')">Risiko</button><button class="btn small secondary" onclick="jumpTo('prognose')">Prognose</button><button class="btn small secondary" onclick="openHoldingWizard()">＋ Position</button></div><div class="card"><div class="chart-header"><h3>Deine Diversifikation</h3><button class="btn" onclick="refreshPersonalPortfolio()">Meine Marktdaten aktualisieren</button></div><p class="section-intro personal-status">Nur deine erfassten Positionen. Keine automatische Broker-Verbindung.</p><div id="personalDiversification"></div></div><div class="card"><h3>Was für dich auffällt</h3><div id="personalInsights"></div><button class="btn secondary" onclick="jumpTo('risiko')">Anlageprofil bearbeiten</button></div></section>
+
+      <!-- PROGNOSE -->
+      <section id="prognose" class="view-section"><div class="analysis-nav" aria-label="Portfolio-Auswertungen"><button class="btn small secondary" onclick="jumpTo('diversifikation')">Diversifikation</button><button class="btn small secondary" onclick="jumpTo('risiko')">Risiko</button><button class="btn small " onclick="jumpTo('prognose')">Prognose</button><button class="btn small secondary" onclick="openHoldingWizard()">＋ Position</button></div><div class="card"><div class="chart-header"><h3>Prognose: Was die Daten wirklich zeigen</h3><button class="btn" onclick="refreshPersonalPortfolio()">Meine Marktdaten aktualisieren</button></div><p class="section-intro personal-status">Nur deine erfassten Positionen. Keine automatische Broker-Verbindung.</p><p class="section-intro">Ein zuverlässiger zukünftiger Depotwert lässt sich aus diesen Kursdaten nicht bestimmen. Hier siehst du nachvollziehbare historische Modellzeiträume mit Anfangs- und Enddatum – keine Kursziele.</p><div class="form-row"><div class="field"><label for="scenarioDays">Vergleichszeitraum</label><select id="scenarioDays" onchange="renderPrognose()"><option value="30">Etwa 30 Kalendertage</option><option value="90">Etwa 90 Kalendertage</option><option value="365">Etwa 1 Jahr</option></select></div></div><div id="personalScenarios"></div></div><div class="card"><h3>Dein Stresstest</h3><p class="section-intro">Bewusst gewählte Annahme für den gesamten Depotwert, keine Kursvorhersage.</p><div class="field"><label for="personalShock">Änderung des Gesamtwerts in %</label><input id="personalShock" type="number" min="-100" max="100" placeholder="Deine Annahme, z. B. −10" step="1" oninput="renderPrognose()"></div><div id="personalStress"></div></div></section>
+
+      <!-- EXPORT -->
+      <section id="export" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Daten exportieren</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Lade deine Daten als CSV herunter, z.B. für Excel oder deine Steuerunterlagen.</p>
+          <div class="link-row">
+            <button class="btn secondary" onclick="exportCsv('holdings')">Portfolio als CSV</button>
+            <button class="btn secondary" onclick="exportCsv('transactions')">Transaktionen als CSV</button>
+            <button class="btn secondary" onclick="exportCsv('dividends')">Dividenden als CSV</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- BACKUP -->
+      <section id="backup" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Backup</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Da alle Daten nur lokal für dich gespeichert werden, empfiehlt sich ab und zu ein Backup als Datei – z.B. bevor du den Browser wechselst.</p>
+          <div class="link-row">
+            <button class="btn secondary" onclick="exportBackup()">Backup exportieren (.json)</button>
+            <label class="btn secondary" style="cursor:pointer;">Backup importieren
+              <input type="file" accept="application/json" style="display:none;" onchange="importBackup(event)">
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- EINSTELLUNGEN -->
+      <section id="einstellungen" class="view-section">
+        <div class="card">
+          <h3 style="margin-bottom:14px;">Einstellungen</h3><p class="section-intro" id="fxStatus">Wechselkurse: manuelle Werte. Werden beim Öffnen online aktualisiert.</p><button class="btn secondary small" onclick="refreshExchangeRates()">Wechselkurse abrufen</button>
+          <div class="form-row">
+            <div class="field"><label>Anzeige-Währung</label>
+              <select id="s_currency" onchange="updateSettings()"><option value="CHF">CHF</option><option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option></select>
+            </div>
+            <div class="field"><label>1 CHF in EUR</label><input id="rate_EUR" type="number" step="0.0001" onchange="updateSettings()"></div>
+            <div class="field"><label>1 CHF in USD</label><input id="rate_USD" type="number" step="0.0001" onchange="updateSettings()"></div>
+            <div class="field"><label>1 CHF in GBP</label><input id="rate_GBP" type="number" step="0.0001" onchange="updateSettings()"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Alle Daten löschen</h3>
+          <p class="section-intro" style="margin-bottom:14px;">Setzt Portfolio, Transaktionen, Dividenden, Watchlist, Notizen und Snapshots vollständig zurück. Das kann nicht rückgängig gemacht werden.</p>
+          <button class="btn danger" onclick="resetAll()">Alles löschen</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="appToast" role="status" hidden></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle" id="historyModal" onclick="if(event.target===this) closeHistory()">
+    <div class="modal-card"><div class="chart-header"><div><h3 id="historyTitle">Kursverlauf</h3><p class="section-intro">Anbieter-Kursverlauf; bei Ausfall deine gespeicherten Preise</p></div><button class="btn secondary" onclick="closeHistory()">Schliessen</button></div><canvas id="positionChart"></canvas><div id="positionHistoryEmpty" class="empty-state"></div></div>
+  </div>
+
+<dialog id="holdingWizard" class="holding-dialog" aria-labelledby="hwTitle"><div class="wizard-top"><div><span class="eyebrow">DEINE ECHTEN POSITIONEN</span><h2 id="hwTitle">Position erfassen</h2></div><button class="btn secondary small" onclick="closeHoldingWizard()" aria-label="Erfassung schliessen">✕</button></div><div id="hwForm"><label for="hwSearch">1 · Aktie, ETF oder Kryptowährung suchen</label><div class="wizard-search"><input id="hwSearch" placeholder="z. B. NVIDIA, Nestlé oder BTC-USD" autocomplete="off" oninput="scheduleHoldingSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchHoldingAssets()}"><button class="btn" onclick="searchHoldingAssets()">Suchen</button></div><div id="hwResults"></div><div id="hwQuote"></div><div id="hwDetails" hidden><div class="wizard-fields"><div class="field"><label for="hwShares">2 · Wie viele Stück besitzt du?</label><input id="hwShares" type="number" min="0" step="any" inputmode="decimal" placeholder="Deine tatsächliche Anzahl" oninput="updateHoldingPreview()"></div><div class="field"><label id="hwBuyLabel" for="hwBuy">Kaufpreis je Stück (optional)</label><input id="hwBuy" type="number" min="0" step="any" inputmode="decimal" placeholder="Leer lassen, wenn unbekannt"></div><div class="field"><label for="hwClass">Anlageklasse</label><select id="hwClass"><option>Aktien</option><option>ETF</option><option>Krypto</option><option>Anleihen</option><option>Sonstiges</option></select></div></div><p id="hwPreview" class="wizard-value"></p><p class="section-intro">Ohne Kaufpreis funktionieren Bewertung, Diversifikation und Risiko. Gewinn/Verlust wird erst mit deinem Kaufpreis berechnet.</p><button class="btn" id="hwSave" onclick="saveGuidedHolding()">Position speichern & analysieren</button></div><details class="wizard-help"><summary>Die Suche liefert keinen passenden Titel?</summary><p class="section-intro">Nutze den genauen Ticker deiner Börse. Beispiel: Nestlé an der SIX ist NESN.SW. Für manuell gepflegte Kurse bleibt die erweiterte Eingabe verfügbar.</p><button class="btn secondary small" onclick="openAdvancedHolding()">Erweiterte Eingabe öffnen</button></details></div><div id="hwSuccess" hidden><h3>Deine Position ist erfasst</h3><p id="hwSavedText"></p><div class="analysis-nav"><button class="btn" onclick="openSavedAnalysis('diversifikation')">Diversifikation ansehen</button><button class="btn secondary" onclick="openSavedAnalysis('risiko')">Risiko ansehen</button><button class="btn secondary" onclick="openSavedAnalysis('prognose')">Prognose ansehen</button><button class="btn secondary" onclick="openHoldingWizard()">Weitere Position erfassen</button></div></div><p id="hwStatus" class="wizard-status" role="status" aria-live="polite"></p></dialog>
+  <script src="/assets/portfolio-math.js"></script>
+  <script>
+    const RISK_WEIGHTS = { 'Aktien': 7, 'ETF': 5, 'Anleihen': 3, 'Krypto': 9, 'Bargeld': 1, 'Sonstiges': 6 };
+    const STORAGE_KEY = 'investpro-data';
+
+    let appData = {
+      settings: { currency: 'CHF', rates: { CHF: 1, EUR: 0.94, USD: 1.18, GBP: 0.81 } },
+      holdings: [],
+      transactions: [],
+      dividends: [],
+      watchlist: [],
+      notes: [],
+      snapshots: []
+    };
+    let storageAvailable = true;
+    let charts = { overview: null, prognose: null, pie: null, perf: null, position: null };
+    let assistantTimer=null, scannerAutoTimer=null, scannerRunning=false, marketAutoTimer=null, quickStockTimer=null, quickStockMonitor=null, quickStockSymbol='', quickStockHistory=[], quickLastSignal=null;
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function today() { return new Date().toISOString().slice(0, 10); }
+    function escHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function rate(cur) { return Number(appData.settings.rates?.[cur] || (cur === 'CHF' ? 1 : 1)); }
+    function toChf(n, cur) { return (Number(n) || 0) / rate(cur || 'CHF'); }
+    function fromChf(n, cur) { return (Number(n) || 0) * rate(cur || appData.settings.currency || 'CHF'); }
+    function fmt(n) {
+      if(!Number.isFinite(n))return '–';
+      const cur = appData.settings.currency || 'CHF';
+      try { return new Intl.NumberFormat('de-CH', { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(fromChf(n, cur)); }
+      catch (e) { return fromChf(n, cur).toFixed(2) + ' ' + cur; }
+    }
+
+    async function loadData() {
+      try {
+        let raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw && window.storage) { const res = await window.storage.get(STORAGE_KEY, false); raw = res?.value; }
+        if (raw) appData = normalizeData(JSON.parse(raw));
+        appData.settings ||= {}; appData.settings.currency ||= 'CHF';
+        appData.settings.rates = Object.assign({CHF:1,EUR:.94,USD:1.18,GBP:.81}, appData.settings.rates || {});
+        appData.holdings = (appData.holdings || []).map(h => Object.assign({currency:'CHF',fees:0,priceHistory:[{date:today(),price:Number(h.currentPrice)||0}]},h));
+      } catch (e) {
+        storageAvailable = false;
+        document.getElementById('storageBanner').classList.toggle('show', !storageAvailable); document.getElementById('storageBanner').textContent='Gespeicherte Daten konnten nicht geladen werden. Bitte vor neuen Eingaben dein Backup prüfen.';
+      }
+      renderAll(); loadMarketOverview(); loadCatalog(); refreshExchangeRates(); scheduleMarketRefresh(); scheduleAssistant();
+    }
+
+    async function saveData() {
+      try {
+        if (!storageAvailable) return;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        
+      } catch (e) {
+        storageAvailable = false;
+        document.getElementById('storageBanner').classList.add('show');
+      }
+    }
+
+    function switchView(viewId, element) {
+      const destination=document.getElementById(viewId);if(!destination)return;element||=document.querySelector('.nav-item[data-view="'+viewId+'"]');
+      if(viewId!=='ki')stopDetailLive();else if(currentStock&&detailAuto){startDetailLive();}
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+      element?.classList.add('active');
+      document.getElementById(viewId).classList.add('active');
+      document.getElementById('page-title').innerText = (element?.innerText||viewId).replace(/[^\w\sÀ-ÿ/-]/gi, '').trim();
+      document.getElementById('searchDropdown').classList.remove('show');
+      if(['risiko','diversifikation','prognose'].includes(viewId)){fillInvestorProfile();renderPersonalViews();if(appData.holdings.length&&!personalLoading&&Date.now()-personalLoadedAt>300000)refreshPersonalPortfolio();}
+      if(viewId==='scanner'){if(document.getElementById('scannerCount').textContent==='–')runGlobalScanner();else scheduleScannerRefresh();}
+      closeMenu();document.querySelector('main')?.scrollTo?.({top:0,behavior:'instant'});destination.scrollIntoView?.({block:'start'});
+    }
+
+    function toggleMenu() { const open = !document.getElementById('sidebar').classList.contains('open'); document.getElementById('sidebar').classList.toggle('open', open); document.getElementById('sidebarOverlay').classList.toggle('show', open); document.getElementById('menuBtn').setAttribute('aria-expanded', open); }
+    function closeMenu() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('show'); document.getElementById('menuBtn').setAttribute('aria-expanded','false'); }
+
+    function holdingValue(h) { return toChf((Number(h.shares) || 0) * (Number(h.currentPrice) || 0), h.currency); }
+    function holdingCost(h) { if(h.costKnown===false||!Number.isFinite(h.buyPrice))return NaN;return toChf((Number(h.shares) || 0) * (Number(h.buyPrice) || 0), h.currency) + Number(h.fees || 0); }
+    function totalValue() { return appData.holdings.reduce((s, h) => s + holdingValue(h), 0); }
+    function totalCost() { return appData.holdings.reduce((s, h) => s + holdingCost(h), 0); }
+
+    // ---------- DASHBOARD ----------
+    function renderDashboard() {
+      const total = totalValue(), cost = totalCost();
+      const gain = total - cost;
+      const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+      document.getElementById('kpiTotal').innerText = fmt(total);
+      const tEl = document.getElementById('kpiTotalTrend');
+      tEl.innerText = Number.isFinite(cost)?(gain >= 0 ? '+' : '') + fmt(gain) + ' (' + gainPct.toFixed(1) + '%)':'Gewinn/Verlust offen · Kaufpreis fehlt bei mindestens einer Position';
+      tEl.className = 'trend ' + (!Number.isFinite(gain)?'':gain >= 0 ? 'positive' : 'negative');
+
+      const thisMonth = today().slice(0, 7);
+      const divSum = appData.dividends.filter(d => d.date && d.date.slice(0, 7) === thisMonth).reduce((s, d) => s + Number(d.amount || 0), 0);
+      document.getElementById('kpiDiv').innerText = fmt(divSum);
+
+      const assessment=personalAssessment(),model=assessment.model;
+      document.getElementById('kpiRisk').innerText=model?number(model.volatility*100,1)+' %':'–';
+      document.getElementById('kpiRiskTrend').innerText=model?'Historisches Modell · '+model.end:'Marktdaten unter Risiko laden';
+      document.getElementById('kpiForecast').innerText=model?number(model.observations,0)+' Kurstage':'–';
+      document.getElementById('kpiForecastTrend').innerText=model?model.start+' bis '+model.end:'Noch keine ausreichenden Marktdaten';
+      const snaps=validSnapshots();
+      document.getElementById('overviewEmpty').style.display=snaps.length?'none':'block';
+      document.getElementById('overviewChart').innerHTML=snapshotPlot(snaps);
+    }
+
+    function chartOpts(extra) {
+      return Object.assign({ responsive: true, plugins: { legend: { labels: { color: '#f8fafc' } } }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }, y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } } } }, extra || {});
+    }
+
+    // ---------- PORTFOLIO ----------
+    async function addHolding(){const name=document.getElementById('p_name').value.trim(),ticker=document.getElementById('p_ticker').value.trim().toUpperCase(),shares=Number(document.getElementById('p_shares').value),buyPrice=Number(document.getElementById('p_buy').value),currency=document.getElementById('p_currency').value,assetClass=document.getElementById('p_class').value,entered=document.getElementById('p_current').value;let currentPrice=entered?Number(entered):buyPrice;if(!name||!validTicker(ticker)||![shares,buyPrice,currentPrice].every(n=>Number.isFinite(n)&&n>0)){alert('Bitte Name, gültigen Ticker und positive Zahlen eingeben.');return;}if(appData.holdings.some(h=>h.ticker===ticker)){alert('Diese Position besteht bereits. Zusätzliche Stücke unter Transaktionen buchen.');return;}let q=null;try{q=await fetchQuote(ticker);}catch(e){if(!confirm(e.message+' Mit deinen manuell eingegebenen Preisen speichern?'))return;}if(q&&q.currency!==currency){alert('Der Kursanbieter meldet '+q.currency+'. Bitte die Handelswährung und Eingabepreise prüfen.');return;}if(q&&!entered)currentPrice=q.price;appData.holdings.push({id:uid(),name,ticker,assetClass,shares,buyPrice,currentPrice,currency,fees:0,quoteTime:q?.quoteTime||null,priceSource:q&&!entered?q.source:'Manuell',priceHistory:[{date:today(),price:currentPrice}]});saveData();renderAll();['p_name','p_ticker','p_shares','p_buy','p_current'].forEach(id=>document.getElementById(id).value='');toast('Position hinzugefügt.');}
+    function deleteHolding(id) { appData.holdings = appData.holdings.filter(h => h.id !== id); saveData(); renderAll(); }
+    function updateHoldingPrice(id,val){const price=Number(val),h=appData.holdings.find(x=>x.id===id);if(!h)return;if(!Number.isFinite(price)||price<=0){alert('Bitte einen positiven Kurs eingeben.');renderPortfolio();return;}h.currentPrice=price;h.quoteTime=null;h.priceSource='Manuell';h.priceHistory||=[];const last=h.priceHistory.find(x=>x.date===today());if(last)last.price=price;else h.priceHistory.push({date:today(),price});saveData();renderAll();}
+
+    function validTicker(ticker){return /^[A-Z0-9.^=\-]{1,20}$/.test(ticker);}
+
+    async function fetchQuote(symbol){return api('/api/quote?symbol='+encodeURIComponent(symbol));}
+
+    async function loadMarketOverview(){if(marketBusy)return;marketBusy=true;const status=document.getElementById('marketStatus'),grids=[document.getElementById('marketGrid'),document.getElementById('marketGridFull')];status.textContent='Marktkurse werden abgerufen …';try{const d=await api('/api/overview'),rows=d.results||[],ok=rows.filter(q=>!q.error);const html=rows.map(q=>`<button class="market-card" onclick="openStockForecast('${escHtml(q.symbol)}')"><span class="symbol">${escHtml(q.displayName)}</span><b class="market-price">${q.error?'Nicht verfügbar':escHtml(money(q.price,q.symbol.startsWith('^')?null:q.currency))}</b><span class="change" style="color:${q.change>=0?'var(--accent-green)':'var(--accent-red)'}">${q.error?'Erneut versuchen':changeLabel(q.change)}</span><small>${q.error?'Quelle vorübergehend nicht erreichbar':escHtml(quoteStamp(q))}</small></button>`).join('');grids.forEach(g=>g.innerHTML=html);status.textContent=ok.length+'/'+rows.length+' Märkte verfügbar · Kurszeiten stehen bei den Werten';}catch(e){status.textContent=e.message;grids.forEach(g=>{if(!g.querySelector('.market-card'))g.innerHTML='<div class="empty-state">'+escHtml(e.message)+'</div>';});}finally{marketBusy=false;}}
+
+    function scheduleMarketRefresh(){clearInterval(marketAutoTimer);marketAutoTimer=setInterval(()=>{if(!document.hidden)loadMarketOverview();},60000);}
+
+    function scheduleQuickStockSearch(){quickStockSymbol='';quickStockHistory=[];quickLastSignal=null;quickRequest++;stopQuickMonitor();clearTimeout(quickStockTimer);quickStockTimer=setTimeout(searchQuickStocks,350);}
+    async function searchQuickStocks(){return searchBox('quickStockInput','quickStockResults','selectQuickStock');}
+    function selectQuickStock(symbol){stopQuickMonitor();quickStockHistory=[];quickLastSignal=null;quickStockSymbol=symbol;document.getElementById('quickStockInput').value=symbol;document.getElementById('quickStockResults').classList.remove('show');return showQuickStock();}
+    async function showQuickStock(background=false){const id=++quickRequest,input=document.getElementById('quickStockInput'),out=document.getElementById('quickStockOutput'),btn=document.getElementById('quickStockButton'),status=document.getElementById('quickStockStatus');if(!input.value.trim()){out.style.display='block';out.textContent='Bitte eine Aktie eingeben.';return false;}btn.disabled=true;out.style.display='block';if(!background)out.textContent='Aktie wird geladen …';try{const symbol=quickStockSymbol||await resolveSymbol(input.value);const [quote,forecast]=await Promise.all([fetchQuote(symbol),api('/api/forecast?symbol='+encodeURIComponent(symbol)).catch(()=>null)]);if(id!==quickRequest)return false;quickStockSymbol=symbol;input.value=symbol;quote.forecast=forecast;quickStockHistory.push({price:quote.price,time:quote.quoteTime});quickStockHistory=quickStockHistory.slice(-60);out.innerHTML=stockHeader(quote)+`<div class="link-row" style="margin-top:16px"><button class="btn" onclick="openStockForecast('${escHtml(symbol)}')">Kursverlauf & Analyse</button><button class="btn secondary" onclick="watchStock('${escHtml(symbol)}','${escHtml(encodeURIComponent(quote.name).replace(/'/g,'%27'))}')">☆ Watchlist</button></div>`;status.className='status ok';status.textContent='Kurs verfügbar';const changed=forecast&&quickLastSignal&&quickLastSignal.direction!==forecast.direction;if(forecast)quickLastSignal=forecast;if(changed&&'Notification' in window&&Notification.permission==='granted')new Notification('InvestPro: Trend geändert',{body:symbol+': '+forecast.direction});return true;}catch(e){if(id===quickRequest){out.textContent=e.message;status.className='status warn';status.textContent='Nicht verfügbar';}return false;}finally{btn.disabled=false;btn.textContent='Aktie anzeigen';}}
+
+    async function toggleQuickMonitor(){if(quickStockMonitor){stopQuickMonitor();return;}if(!await showQuickStock())return;document.getElementById('quickMonitorButton').textContent='Beobachtung stoppen';document.getElementById('quickMonitorInfo').textContent=quickStockSymbol+' · Prüfung jede Minute, solange diese Seite sichtbar geöffnet ist.';quickStockMonitor=setInterval(()=>{if(!document.hidden&&!document.getElementById('quickStockButton').disabled)showQuickStock(true);},60000);}
+
+    async function refreshAllPrices(){if(!appData.holdings.length){await loadMarketOverview();return;}const btn=document.getElementById('refreshAllBtn'),status=document.getElementById('marketStatus');btn.disabled=true;status.textContent='Positionen werden aktualisiert …';let updated=0,failed=[];try{for(const h of appData.holdings){try{const q=await fetchQuote(h.ticker);if(q.currency!==h.currency)throw new Error('Abweichende Handelswährung');h.currentPrice=q.price;h.quoteTime=q.quoteTime;h.priceSource=q.source;h.priceHistory||=[];const date=q.quoteTime?new Date(q.quoteTime).toISOString().slice(0,10):today();const old=h.priceHistory.find(x=>x.date===date);if(old)old.price=q.price;else h.priceHistory.push({date,price:q.price});updated++;}catch{failed.push(h.ticker);}}await saveData();renderAll();status.textContent=updated+' Positionen aktualisiert'+(failed.length?' · Unverändert: '+failed.join(', '):'');}finally{btn.disabled=false;}}
+
+    async function refreshExchangeRates() {
+      const status=document.getElementById('marketStatus'); status.innerHTML='<span class="spinner"></span> Wechselkurse werden geladen …';
+      try { const r=await fetch('/api/rates').then(x=>{if(!x.ok)throw new Error();return x.json()}); appData.settings.rates=Object.assign(appData.settings.rates,r.rates); appData.settings.ratesTimestamp=r.timestamp; appData.settings.ratesSource=r.source; await saveData(); renderAll(); document.getElementById('fxStatus').textContent='Wechselkurse: '+new Date(r.timestamp).toLocaleString('de-CH')+' · '+r.source; }
+      catch(e) { document.getElementById('fxStatus').textContent='Wechselkurse nicht erreichbar. Gespeicherte oder manuelle Umrechnungskurse werden verwendet.'; }
+    }
+
+    function renderPortfolio() {
+      const wrap = document.getElementById('portfolioTableWrap');
+      if (appData.holdings.length === 0) { wrap.innerHTML = '<div class="empty-state">Noch keine Positionen. Füge oben deine erste hinzu.</div>'; return; }
+      let rows = appData.holdings.map(h => {
+        const val = holdingValue(h), cost = holdingCost(h), gain = val - cost, gainPct = cost ? (gain / cost * 100) : 0;
+        return `<tr>
+          <td>${escHtml(h.name)}<br><span style="color:var(--text-muted); font-size:0.75rem;">${escHtml(h.ticker)} · ${escHtml(h.assetClass)}</span></td>
+          <td>${h.shares}</td>
+          <td><input aria-label="Kaufpreis ${escHtml(h.ticker)} in ${escHtml(h.currency)}" class="inline-price" type="number" min="0" step="any" placeholder="Unbekannt" value="${h.costKnown===false?'':h.buyPrice??''}" onchange="updateHoldingBasis('${h.id}',this.value)"><small>${escHtml(h.currency)}</small></td>
+          <td><input class="inline-price" type="number" step="any" value="${h.currentPrice}" onchange="updateHoldingPrice('${h.id}', this.value)"></td>
+          <td>${fmt(val)}</td>
+          <td class="${gain >= 0 ? 'positive' : 'negative'}" style="color:${gain >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${Number.isFinite(gain)?(gain >= 0 ? '+' : '')+fmt(gain)+' ('+gainPct.toFixed(1)+'%)':'Kaufpreis fehlt'}</td>
+          <td><div class="link-row"><button class="btn secondary small" onclick="showHistory('${h.id}')">Verlauf</button><button class="btn danger small" onclick="deleteHolding('${h.id}')">Löschen</button></div></td>
+        </tr>`;
+      }).join('');
+      wrap.innerHTML = `<div class="table-scroll"><table class="data-table"><thead><tr><th>Position</th><th>Anzahl</th><th>Kaufpreis</th><th>Aktueller Kurs</th><th>Wert</th><th>Gewinn/Verlust</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    async function showHistory(id){const h=appData.holdings.find(x=>x.id===id);if(!h)return;document.getElementById('historyTitle').textContent=h.name+' · '+h.ticker;document.getElementById('historyModal').classList.add('show');document.getElementById('positionChart').style.display='none';const box=document.getElementById('positionHistoryEmpty');box.innerHTML='Kursverlauf wird geladen …';try{const d=await api('/api/history?symbol='+encodeURIComponent(h.ticker));box.innerHTML=sparkline(d.history,'position')+'<p class="section-intro">Tageskurse in '+escHtml(d.currency)+' · Quelle: '+escHtml(d.source)+'</p>';}catch(e){box.innerHTML=sparkline((h.priceHistory||[]).map(x=>({...x,close:x.price})),'position')+'<p class="section-intro">'+escHtml(e.message)+' Angezeigt werden deine gespeicherten Preise.</p>';}}
+    function closeHistory() { document.getElementById('historyModal').classList.remove('show'); }
+
+    // ---------- KURSE ----------
+    function renderKurse() {
+      const wrap = document.getElementById('kurseTableWrap');
+      if (appData.holdings.length === 0) { wrap.innerHTML = '<div class="empty-state">Noch keine Positionen, für die ein Kurs gepflegt werden könnte.</div>'; return; }
+      let rows = appData.holdings.map(h => `<tr>
+        <td>${escHtml(h.name)}</td><td>${escHtml(h.ticker)}</td>
+        <td><input class="inline-price" type="number" step="any" value="${h.currentPrice}" onchange="updateHoldingPrice('${h.id}', this.value)"></td>
+        <td>${fmt(holdingValue(h))}</td>
+      </tr>`).join('');
+      wrap.innerHTML = `<table class="data-table"><thead><tr><th>Name</th><th>Ticker</th><th>Aktueller Kurs</th><th>Wert</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    // ---------- SUCHE ----------
+    function matchList(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return { holdings: [], watchlist: [] };
+      return {
+        holdings: appData.holdings.filter(h => h.name.toLowerCase().includes(q) || h.ticker.toLowerCase().includes(q)),
+        watchlist: appData.watchlist.filter(w => w.name.toLowerCase().includes(q) || w.ticker.toLowerCase().includes(q))
+      };
+    }
+    function renderSucheResults() {
+      const q = document.getElementById('sucheInput').value;
+      const { holdings, watchlist } = matchList(q);
+      const box = document.getElementById('sucheResults');
+      if (!q.trim()) { box.innerHTML = '<p class="section-intro">Tippe einen Namen oder Ticker ein.</p>'; return; }
+      if (holdings.length === 0 && watchlist.length === 0) { box.innerHTML = '<p class="section-intro">Keine Treffer in Portfolio oder Watchlist.</p>'; return; }
+      let html = '';
+      if (holdings.length) html += '<h3 style="margin-bottom:8px;">Im Portfolio</h3><table class="data-table"><thead><tr><th>Name</th><th>Ticker</th><th>Wert</th></tr></thead><tbody>' + holdings.map(h => `<tr><td>${escHtml(h.name)}</td><td>${escHtml(h.ticker)}</td><td>${fmt(holdingValue(h))}</td></tr>`).join('') + '</tbody></table>';
+      if (watchlist.length) html += '<h3 style="margin:16px 0 8px;">In der Watchlist</h3><table class="data-table"><thead><tr><th>Name</th><th>Ticker</th><th>Notiz</th></tr></thead><tbody>' + watchlist.map(w => `<tr><td>${escHtml(w.name)}</td><td>${escHtml(w.ticker)}</td><td>${escHtml(w.note || '')}</td></tr>`).join('') + '</tbody></table>';
+      box.innerHTML = html;
+    }
+    let searchTimer;
+    function scheduleOnlineSearch() { renderSucheResults(); clearTimeout(searchTimer); searchTimer=setTimeout(searchOnline,450); }
+    async function searchOnline(){const input=document.getElementById('sucheInput'),q=input.value.trim(),box=document.getElementById('sucheResults');if(!q)return;try{const d=await api('/api/search?q='+encodeURIComponent(q));if(input.value.trim()!==q)return;renderSucheResults();box.insertAdjacentHTML('beforeend','<h3 style="margin-top:16px">Weitere Aktien und Märkte</h3>'+(d.message?'<p class="section-intro">'+escHtml(d.message)+'</p>':'')+(d.results.length?d.results.map(x=>`<button class="stock-result" onclick="openStockForecast('${escHtml(x.symbol)}')"><span>${escHtml(x.name)} · ${escHtml(x.exchange)}</span><b>${escHtml(x.symbol)} ↗</b></button>`).join(''):'<p class="section-intro">Kein Treffer. Versuche den Börsenticker.</p>'));}catch(e){if(input.value.trim()===q)box.textContent=e.message;}}
+    let globalSearchRequest=0;
+    async function renderGlobalSearch() {
+      const q = document.getElementById('globalSearch').value;
+      const dd = document.getElementById('searchDropdown');
+      if (!q.trim()) { dd.classList.remove('show'); return; }
+      const { holdings, watchlist } = matchList(q);
+      const items = [...holdings.map(h => ({ label: h.name + ' · ' + h.ticker, view: 'portfolio' })), ...watchlist.map(w => ({ label: w.name + ' · ' + w.ticker + ' (Watchlist)', view: 'watchlist' }))].slice(0, 6);
+      dd.innerHTML = items.map(i => `<div class="search-dropdown-item" onclick="jumpTo('${i.view}')"><span>${escHtml(i.label)}</span></div>`).join('')+'<div class="search-dropdown-item"><span class="spinner"></span> Online suchen …</div>';
+      dd.classList.add('show');
+      const request=++globalSearchRequest;
+      try{const data=await fetch('/api/search?q='+encodeURIComponent(q)).then(r=>r.json());if(request!==globalSearchRequest||document.getElementById('globalSearch').value!==q)return;const online=(data.results||[]).slice(0,5);dd.innerHTML=items.map(i=>`<div class="search-dropdown-item" onclick="jumpTo('${i.view}')"><span>${escHtml(i.label)}</span></div>`).join('')+online.map(x=>`<div class="search-dropdown-item" onclick="openStockForecast('${escHtml(x.symbol)}')"><span>${escHtml(x.name)}<br><small style="color:var(--text-muted)">${escHtml(x.symbol)} · ${escHtml(x.exchange)}</small></span><b>Prognose</b></div>`).join('')+(items.length||online.length?'':'<div class="search-dropdown-item">Keine Treffer</div>');}catch(e){if(!items.length)dd.innerHTML='<div class="search-dropdown-item">Keine Treffer</div>';}
+    }
+    function jumpTo(view) {
+      const li = document.querySelector(`.nav-item[data-view="${view}"]`);
+      switchView(view, li);
+      document.getElementById('globalSearch').value = '';
+      document.getElementById('searchDropdown').classList.remove('show');
+    }
+    let selectedForecastSymbol='';
+    function openStockForecast(symbol){selectedForecastSymbol=symbol;document.getElementById('forecastTicker').value=symbol;document.getElementById('forecastStockResults').classList.remove('show');jumpTo('ki');setTimeout(runAiAnalysis,50);}
+
+    let forecastSearchTimer;
+    function scheduleForecastSearch(){stopDetailLive();detailRequest++;selectedForecastSymbol='';clearTimeout(forecastSearchTimer);forecastSearchTimer=setTimeout(searchForecastStocks,350);}
+    async function searchForecastStocks(){return searchBox('forecastTicker','forecastStockResults','selectForecastStock');}
+    function selectForecastStock(symbol){selectedForecastSymbol=symbol;document.getElementById('forecastTicker').value=symbol;document.getElementById('forecastStockResults').classList.remove('show');runAiAnalysis();}
+
+    // ---------- NOTIZEN ----------
+    function addNote() {
+      const date = document.getElementById('n_date').value || today();
+      const text = document.getElementById('n_text').value.trim();
+      if (!text) return;
+      appData.notes.unshift({ id: uid(), date, text });
+      document.getElementById('n_text').value = '';
+      saveData(); renderNotes();
+    }
+    function deleteNote(id) { appData.notes = appData.notes.filter(n => n.id !== id); saveData(); renderNotes(); }
+    function renderNotes() {
+      const wrap = document.getElementById('notesList');
+      if (appData.notes.length === 0) { wrap.innerHTML = '<div class="empty-state">Noch keine Notizen.</div>'; return; }
+      wrap.innerHTML = appData.notes.map(n => `<div style="padding:10px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; gap:10px;">
+        <div><span style="color:var(--text-muted); font-size:0.75rem;">${escHtml(n.date)}</span><br>${escHtml(n.text)}</div>
+        <button class="btn danger small" onclick="deleteNote('${n.id}')">×</button></div>`).join('');
+    }
+
+    // ---------- KI-ANALYSE ----------
+    async function runAiAnalysis(){stopDetailLive();const id=++detailRequest,btn=document.getElementById('kiButton'),out=document.getElementById('kiOutput');btn.disabled=true;btn.textContent='Lädt …';out.textContent='Kursverlauf und Nachrichten werden geladen …';try{const q=document.getElementById('forecastTicker').value.trim(),symbol=selectedForecastSymbol||(q?await resolveSymbol(q):document.getElementById('forecastSymbol').value);let d;try{d=await api('/api/stock?symbol='+encodeURIComponent(symbol));}catch{const live=await api('/api/intraday?symbol='+encodeURIComponent(symbol));d={...live,history:[],technical:null,forecast:null,news:{items:[],available:false}};}if(id!==detailRequest)return;selectedForecastSymbol=symbol;document.getElementById('forecastTicker').value=symbol;showStockDetails(d);}catch(e){if(id===detailRequest)out.textContent=e.message;}finally{btn.disabled=false;btn.textContent='Analyse anzeigen';}}
+
+    async function runGlobalScanner(){
+      if(scannerRunning)return;
+      const btn=document.getElementById('scannerButton'),box=document.getElementById('scannerResults'),status=document.getElementById('scannerStatus');
+      const region=document.getElementById('scannerRegion').value,direction=document.getElementById('scannerDirection').value,limit=document.getElementById('scannerLimit').value;
+      scannerRunning=true;btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Analysiert';status.innerHTML='<span class="spinner"></span> Live-Kurse werden geprüft';box.innerHTML='<div class="empty-state"><span class="spinner"></span> Aktuellste Börsenkurse und Marktbewegungen werden ausgewertet …</div>';
+      try{
+        const data=await fetch(`/api/scanner?region=${encodeURIComponent(region)}&direction=${encodeURIComponent(direction)}&limit=${encodeURIComponent(limit)}`).then(r=>{if(!r.ok)throw new Error();return r.json()});
+        document.getElementById('scannerExchanges').textContent=data.exchangeCount;
+        document.getElementById('scannerCount').textContent=data.scanned+' / '+data.requested;
+        document.getElementById('scannerTime').textContent='Aktualisiert '+new Date(data.timestamp).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const items=data.results||[];
+        box.className='';box.innerHTML=items.length?items.map((x,i)=>`<div class="scanner-card"><div><span class="badge">#${i+1} · ${escHtml(x.exchange||'Börse')}</span><div style="font-weight:750;margin-top:6px">${escHtml(x.name)}</div><div class="section-intro">${escHtml(x.symbol)} · ${escHtml(x.region)}</div></div><div><div class="section-intro">Aktuellster Kurs</div><b>${escHtml(String(x.price))} ${escHtml(x.currency)}</b><div class="${x.change>=0?'trend positive':'trend negative'}">${x.change>=0?'+':''}${x.change}% heute</div><small class="section-intro">${escHtml(x.marketState||'Status unbekannt')}</small></div><div><div class="scanner-signal" style="color:${x.direction==='Steigend'?'var(--accent-green)':'var(--accent-red)'}">${x.direction==='Steigend'?'↗':'↘'} ${escHtml(x.direction)}</div><div class="section-intro">${x.confidence}/100 Signalstärke</div></div><div class="scanner-reason"><b style="color:var(--text-main)">Warum:</b> ${escHtml(x.reason)}<br><b style="color:var(--accent-green)">Chance:</b> ${escHtml(x.opportunity)}<br><b style="color:var(--accent-red)">Risiko:</b> ${escHtml(x.risk)}</div><div class="scanner-action"><button class="btn small" onclick="openStockForecast('${escHtml(x.symbol)}')">Detail-Prognose</button></div></div>`).join(''):'<div class="empty-state">Für diesen Filter wurden gerade keine geeigneten Signale gefunden.</div>';
+        status.textContent=data.scanned+' geprüft'+(data.failed?' · '+data.failed+' nicht verfügbar':'');
+      }catch(e){box.className='empty-state';box.textContent='Der Weltmarkt-Scanner ist gerade nicht erreichbar. Bitte später erneut versuchen.';status.textContent='⚠ Nicht verfügbar';}
+      scannerRunning=false;btn.disabled=false;btn.textContent='Jetzt aktualisieren';scheduleScannerRefresh();
+    }
+
+    function scheduleScannerRefresh(){
+      clearTimeout(scannerAutoTimer);scannerAutoTimer=null;
+      const seconds=Number(document.getElementById('scannerRefresh')?.value||0),next=document.getElementById('scannerNext');
+      if(!seconds){if(next)next.textContent='Automatische Aktualisierung aus';return;}
+      const when=new Date(Date.now()+seconds*1000);if(next)next.textContent='Nächste Prüfung '+when.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+      scannerAutoTimer=setTimeout(()=>{if(document.getElementById('scanner')?.classList.contains('active'))runGlobalScanner();else scheduleScannerRefresh();},seconds*1000);
+    }
+
+    async function enableAssistantNotifications(){
+      if(!('Notification' in window)){alert('Dieser Browser unterstützt keine Benachrichtigungen.');return;}
+      const permission=await Notification.requestPermission();
+      alert(permission==='granted'?'Benachrichtigungen sind aktiviert.':'Benachrichtigungen wurden nicht erlaubt.');
+    }
+
+    function scheduleAssistant(){
+      clearInterval(assistantTimer); assistantTimer=setInterval(runMarketAssistant,30*60*1000);
+      const next=new Date(Date.now()+30*60*1000); document.getElementById('nextAssistantRun').textContent=next.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+    }
+
+    async function runMarketAssistant(){
+      const btn=document.getElementById('assistantRunBtn'),status=document.getElementById('assistantStatus'),box=document.getElementById('assistantSignals');
+      btn.disabled=true; status.innerHTML='<span class="spinner"></span> Analysiert'; box.innerHTML='<div class="empty-state"><span class="spinner"></span> Märkte und Nachrichten werden geprüft …</div>';
+      const base=[['Nasdaq 100','^NDX'],['S&P 500','^GSPC'],['SMI','^SSMI'],['DAX','^GDAXI'],['Bitcoin','BTC-USD'],['Ethereum','ETH-USD'],['Gold','GC=F'],['Öl','CL=F']];
+      const owned=appData.holdings.map(h=>[h.name,h.ticker]); const unique=[...new Map([...owned,...base].map(x=>[x[1],x])).values()].slice(0,15);
+      const results=await Promise.all(unique.map(async([name,symbol])=>{try{const d=await fetch('/api/forecast?symbol='+encodeURIComponent(symbol)).then(r=>{if(!r.ok)throw new Error();return r.json()});return {name,...d}}catch(e){return null}}));
+      const signals=results.filter(Boolean).sort((a,b)=>b.confidence-a.confidence).slice(0,6);
+      if(!signals.length){box.innerHTML='<div class="empty-state">Die Analyse konnte gerade keine Daten laden.</div>';status.textContent='⚠ Nicht verfügbar';btn.disabled=false;scheduleAssistant();return;}
+      box.innerHTML=signals.map(s=>`<div style="padding:13px 0;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;gap:14px;align-items:center"><div><b>${escHtml(s.name)} · ${escHtml(s.symbol)}</b><div class="section-intro">${escHtml(s.summary)}</div></div><div style="text-align:right;white-space:nowrap;color:${s.direction==='Steigend'?'var(--accent-green)':s.direction==='Fallend'?'var(--accent-red)':'var(--accent-amber)'}"><b>${s.direction==='Steigend'?'↗':s.direction==='Fallend'?'↘':'→'} ${escHtml(s.direction)}</b><br><span style="font-size:.75rem">${s.confidence}/100 Signal</span></div></div>`).join('');
+      const strongest=signals[0]; status.textContent='● Zuletzt geprüft: '+new Date().toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+      if('Notification' in window&&Notification.permission==='granted'&&strongest.confidence>=60)new Notification('InvestPro Marktsignal',{body:`${strongest.name}: ${strongest.direction} (${strongest.confidence}/100 Signalstärke)`});
+      btn.disabled=false; scheduleAssistant();
+    }
+
+    async function runProAnalysis(){
+      const btn=document.getElementById('proRunBtn'), box=document.getElementById('proPositions');
+      if(!appData.holdings.length||!Number.isFinite(totalValue())||totalValue()<=0){box.innerHTML='<div class="empty-state">Füge zuerst eine gültige Position im Portfolio hinzu.</div>';return;}
+      btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Analysiert';box.innerHTML='<div class="empty-state"><span class="spinner"></span> Kursreihen und Benchmark werden berechnet …</div>';
+      const total=totalValue(),cost=totalCost(),gain=total-cost,largest=Math.max(...appData.holdings.map(holdingValue))/total*100;
+      const hhi=appData.holdings.reduce((s,h)=>s+(holdingValue(h)/total*100)**2,0);
+      const measured=personalAssessment().model;document.getElementById('proRisk').textContent=measured?number(measured.volatility*100,1)+' %':'–';document.getElementById('proRiskText').textContent=measured?'Historische Schwankung p.a.':'Gemeinsame Kursreihen unter Risiko laden';
+      document.getElementById('proConcentration').textContent=largest.toFixed(1)+'%';document.getElementById('proCrash').textContent=fmt(-total*.15);document.getElementById('proGain').textContent=(gain>=0?'+':'')+fmt(gain);document.getElementById('proGainPct').textContent=Number.isFinite(cost)?(cost?gain/cost*100:0).toFixed(1)+'%':'Kaufpreis fehlt';
+      const rows=await Promise.all(appData.holdings.slice().sort((a,b)=>holdingValue(b)-holdingValue(a)).slice(0,10).map(async h=>{try{const d=await fetch('/api/technical?symbol='+encodeURIComponent(h.ticker)).then(r=>{if(!r.ok)throw new Error();return r.json()});return {h,d}}catch(e){return {h,d:null}}}));
+      box.innerHTML='<div class="table-scroll"><table class="data-table"><thead><tr><th>Position</th><th>Anteil</th><th>Volatilität</th><th>Beta</th><th>RSI</th><th>MACD</th><th>SMA 20/50</th><th>Unterstützung</th><th>Widerstand</th><th>Signal</th></tr></thead><tbody>'+rows.map(({h,d})=>d?`<tr><td><b>${escHtml(h.name)}</b><br>${escHtml(h.ticker)}</td><td>${(holdingValue(h)/total*100).toFixed(1)}%</td><td>${d.volatility}%</td><td>${d.beta??'–'}</td><td>${d.rsi}</td><td>${escHtml(d.macdSignal)}</td><td>${d.sma20} / ${d.sma50}</td><td>${d.support}</td><td>${d.resistance}</td><td><span class="badge ${d.action==='Positives Trendbild'?'green':d.action==='Negatives Trendbild'?'':'purple'}">${escHtml(d.action)} · ${d.confidence}/100</span></td></tr>`:`<tr><td>${escHtml(h.name)}</td><td>${(holdingValue(h)/total*100).toFixed(1)}%</td><td colspan="8">Keine ausreichenden Marktdaten</td></tr>`).join('')+'</tbody></table></div>';
+      document.getElementById('proScenarios').innerHTML=`<div class="grid-4"><div><b style="color:var(--accent-green)">Szenario +15 %</b><p>${fmt(total*1.15)}</p></div><div><b>Unverändert</b><p>${fmt(total)}</p></div><div><b style="color:var(--accent-red)">Szenario −15 %</b><p>${fmt(total*.85)}</p></div></div><p class="section-intro">Rechenbeispiele ohne zugeordnete Eintrittswahrscheinlichkeit.</p>`;
+      const concentrationAction=largest>35?'Grösste Position schrittweise prüfen und Klumpenrisiko reduzieren.':'Gewichtung beobachten; aktuell kein extremes Einzelpositionsrisiko.';
+      document.getElementById('proPlan').innerHTML=`<div style="display:grid;gap:12px"><div class="card"><b>30 Tage · Priorität hoch</b><p class="section-intro">${concentrationAction} Kurs- und Nachrichtenalarme für die grössten Positionen aktivieren.</p></div><div class="card"><b>90 Tage · Portfolio ordnen</b><p class="section-intro">Zielgewichtungen nach Anlageklassen festlegen, Gebühren prüfen und nur bei klarer Abweichung rebalancieren.</p></div><div class="card"><b>365 Tage · Strategie überprüfen</b><p class="section-intro">Rendite gegen S&P 500 oder MSCI World vergleichen, realisierte Gewinne und Dividenden für die Steuerunterlagen exportieren und Anlagehorizont neu bewerten.</p></div></div>`;
+      btn.disabled=false;btn.textContent='Portfolio neu analysieren';
+    }
+
+    // ---------- TRANSAKTIONEN ----------
+    function addTransaction(){const date=document.getElementById('t_date').value||today(),type=document.getElementById('t_type').value,ticker=document.getElementById('t_ticker').value.trim().toUpperCase(),shares=Number(document.getElementById('t_shares').value),price=Number(document.getElementById('t_price').value),fee=Number(document.getElementById('t_fee').value),note=document.getElementById('t_note').value.trim(),chosenCurrency=document.getElementById('t_currency').value;if(!validTicker(ticker)||![shares,price].every(x=>Number.isFinite(x)&&x>0)||!Number.isFinite(fee)||fee<0){alert('Bitte einen gültigen Ticker, positive Anzahl und Preis sowie nicht negative Gebühren eingeben.');return;}let h=appData.holdings.find(x=>x.ticker===ticker);if(type==='Verkauf'&&(!h||shares>Number(h.shares))){alert('Die Stückzahl übersteigt deinen Bestand.');return;}const currency=h?.currency||chosenCurrency;if(h&&currency!==chosenCurrency){alert('Diese Position wird in '+currency+' geführt. Bitte die Transaktionswährung entsprechend wählen.');return;}const before=h?JSON.parse(JSON.stringify(h)):null;let realized=null;if(type==='Kauf'){if(h){const n=Number(h.shares)+shares;h.buyPrice=h.costKnown===false?null:(Number(h.shares)*Number(h.buyPrice)+shares*price)/n;h.shares=n;h.fees=Number(h.fees||0)+toChf(fee,currency);}else{h={id:uid(),name:ticker,ticker,assetClass:'Aktien',shares,buyPrice:price,currentPrice:price,currency,fees:toChf(fee,currency),priceHistory:[{date,price}]};appData.holdings.push(h);}}else{const allocated=Number(h.fees||0)*shares/Number(h.shares);realized=h.costKnown===false?null:toChf(shares*(price-h.buyPrice)-fee,currency)-allocated;h.fees=Math.max(0,Number(h.fees||0)-allocated);h.shares=Number(h.shares)-shares;if(h.shares<=1e-10)appData.holdings=appData.holdings.filter(x=>x.id!==h.id);}const after=appData.holdings.find(x=>x.ticker===ticker)||null;appData.transactions.unshift({id:uid(),date,type,ticker,shares,price,fee,currency,note,realized,beforeHolding:before,afterHolding:after?JSON.parse(JSON.stringify(after)):null});saveData();renderAll();['t_ticker','t_shares','t_price','t_note'].forEach(id=>document.getElementById(id).value='');document.getElementById('t_fee').value='0';toast('Transaktion gebucht.');}
+    function deleteTransaction(id){const t=appData.transactions.find(x=>x.id===id);if(!t)return;if(!Object.hasOwn(t,'beforeHolding')){alert('Dieser ältere Eintrag enthält keinen Wiederherstellungsstand. Er bleibt zur Nachvollziehbarkeit erhalten. Korrigiere den Bestand im Portfolio.');return;}if(appData.transactions.find(x=>x.ticker===t.ticker)?.id!==id){alert('Bitte zuerst die zuletzt gebuchte Transaktion dieses Tickers rückgängig machen.');return;}const current=appData.holdings.find(x=>x.ticker===t.ticker)||null,expected=t.afterHolding;const signature=h=>h?JSON.stringify([h.id,h.shares,h.buyPrice,h.fees,h.currency]):'null';if(signature(current)!==signature(expected)){alert('Der Bestand wurde seit dieser Buchung verändert. Automatisches Rückgängigmachen ist deshalb nicht möglich.');return;}if(!confirm('Diese Buchung rückgängig machen und den vorherigen Bestand wiederherstellen?'))return;appData.holdings=appData.holdings.filter(x=>x.ticker!==t.ticker);if(t.beforeHolding){const restored=JSON.parse(JSON.stringify(t.beforeHolding));if(current){restored.currentPrice=current.currentPrice;restored.priceHistory=current.priceHistory;}appData.holdings.push(restored);}appData.transactions=appData.transactions.filter(x=>x.id!==id);saveData();renderAll();}
+    function renderTransaktionen(){const box=document.getElementById('transTableWrap');box.innerHTML=appData.transactions.length?'<div class="table-scroll"><table class="data-table"><thead><tr><th>Datum</th><th>Typ</th><th>Ticker</th><th>Anzahl</th><th>Preis</th><th>Gebühr</th><th>Realisiert</th><th>Notiz</th><th></th></tr></thead><tbody>'+appData.transactions.map(t=>`<tr><td>${escHtml(t.date)}</td><td>${escHtml(t.type)}</td><td>${escHtml(t.ticker)}</td><td>${number(t.shares)}</td><td>${money(t.price,t.currency||'CHF')}</td><td>${money(t.fee||0,t.currency||'CHF')}</td><td>${t.realized==null?'–':fmt(t.realized)}</td><td>${escHtml(t.note||'')}</td><td><button class="btn secondary small" onclick="deleteTransaction('${t.id}')">Rückgängig</button></td></tr>`).join('')+'</tbody></table></div>':'<div class="empty-state">Noch keine Transaktionen.</div>';}
+
+    // ---------- DIVIDENDEN ----------
+    function addDividend() {
+      const date = document.getElementById('d_date').value || today();
+      const ticker = document.getElementById('d_ticker').value.trim().toUpperCase();
+      const enteredAmount = Number(document.getElementById('d_amount').value);
+      const currency=document.getElementById('d_currency').value; const amount=toChf(enteredAmount,currency);
+      const note = document.getElementById('d_note').value.trim();
+      if (!validTicker(ticker) || !Number.isFinite(amount) || amount <= 0) { alert('Bitte Ticker und Betrag ausfüllen.'); return; }
+      appData.dividends.unshift({ id: uid(), date, ticker, amount, enteredAmount, enteredCurrency:currency, currency:'CHF', note });
+      ['d_ticker', 'd_amount', 'd_note'].forEach(id => document.getElementById(id).value = '');
+      saveData(); renderAll();
+    }
+    function deleteDividend(id) { appData.dividends = appData.dividends.filter(d => d.id !== id); saveData(); renderAll(); }
+    function renderDividenden() {
+      const wrap = document.getElementById('divTableWrap');
+      if (appData.dividends.length === 0) { wrap.innerHTML = '<div class="empty-state">Noch keine Dividenden erfasst.</div>'; return; }
+      wrap.innerHTML = `<table class="data-table"><thead><tr><th>Datum</th><th>Ticker</th><th>Betrag</th><th>Notiz</th><th></th></tr></thead><tbody>${
+        appData.dividends.map(d => `<tr><td>${escHtml(d.date)}</td><td>${escHtml(d.ticker)}</td><td>${fmt(d.amount)}</td><td>${escHtml(d.note || '')}</td><td><button class="btn danger small" onclick="deleteDividend('${d.id}')">×</button></td></tr>`).join('')
+      }</tbody></table>`;
+    }
+
+    // ---------- WATCHLIST ----------
+    function addWatch(){const name=document.getElementById('w_name').value.trim(),ticker=document.getElementById('w_ticker').value.trim().toUpperCase(),note=document.getElementById('w_note').value.trim();if(!name||!validTicker(ticker)){alert('Bitte Name und einen gültigen Ticker eingeben.');return;}if(appData.watchlist.some(x=>x.ticker===ticker)){toast('Dieser Ticker steht bereits auf der Watchlist.');return;}appData.watchlist.push({id:uid(),name,ticker,note});saveData();renderWatchlist();['w_name','w_ticker','w_note'].forEach(id=>document.getElementById(id).value='');}
+    function deleteWatch(id) { appData.watchlist = appData.watchlist.filter(w => w.id !== id); saveData(); renderWatchlist(); }
+    function renderWatchlist(){document.getElementById('watchTableWrap').innerHTML=appData.watchlist.length?appData.watchlist.map(w=>`<div class="watch-row"><div><b>${escHtml(w.name)}</b><p class="section-intro">${escHtml(w.ticker)} · ${escHtml(w.note||'')}</p></div><div class="link-row"><button class="btn small" onclick="openStockForecast('${escHtml(w.ticker)}')">Kurs & Analyse</button><button class="btn secondary small" onclick="deleteWatch('${w.id}')">Entfernen</button></div></div>`).join(''):'<div class="empty-state">Suche eine Aktie und klicke auf „Zur Watchlist“.</div>';}
+
+    // ---------- PERFORMANCE ----------
+    function validSnapshots(){return appData.snapshots.filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s.date)&&Number.isFinite(Date.parse(s.date))&&Number.isFinite(s.value)&&s.value>=0&&(!s.currency||s.currency==='CHF')).sort((a,b)=>a.date.localeCompare(b.date));}
+    function captureSnapshot(automatic=false){
+      if(!appData.holdings.length)return null;
+      const positions=appData.holdings.map(h=>({ticker:h.ticker,shares:Number(h.shares),currency:h.currency,price:Number(h.currentPrice),source:h.priceSource||'Gespeichert / manuell',quoteTime:h.quoteTime||null}));
+      if(positions.some(h=>![h.shares,h.price,Number(appData.settings.rates[h.currency])].every(n=>Number.isFinite(n)&&n>0)))return null;
+      const value=totalValue();if(!Number.isFinite(value)||value<0)return null;
+      return {date:today(),value,currency:'CHF',capturedAt:new Date().toISOString(),automatic,positions,rates:{...appData.settings.rates},ratesTimestamp:appData.settings.ratesTimestamp||null,ratesSource:appData.settings.ratesSource||'Gespeichert / manuell'};
+    }
+    function persistSnapshots(snapshots){
+      if(!storageAvailable)return false;
+      try{localStorage.setItem(STORAGE_KEY,JSON.stringify({...appData,snapshots}));appData.snapshots=snapshots;return true;}catch{return false;}
+    }
+    function saveSnapshot(){
+      const snapshot=captureSnapshot();if(!snapshot){toast('Kein Stand gespeichert: Bitte Positionen und Umrechnungskurse prüfen.');return;}
+      if(appData.snapshots.some(s=>s.date===snapshot.date)&&!confirm('Den bereits gespeicherten Stand von heute durch den aktuellen Depotwert ersetzen?'))return;
+      if(!persistSnapshots([...appData.snapshots.filter(s=>s.date!==snapshot.date),snapshot])){toast('Der Stand konnte nicht gespeichert werden.');return;}
+      renderPerformance();renderDashboard();toast('Heutiger Stand gespeichert.');
+    }
+    function autoSnapshot(){
+      if(!storageAvailable||appData.snapshots.some(s=>s.date===today()))return;
+      const snapshot=captureSnapshot(true);if(snapshot)persistSnapshots([...appData.snapshots,snapshot]);
+    }
+    function deleteSnapshot(date){if(!persistSnapshots(appData.snapshots.filter(s=>s.date!==date))){toast('Stand konnte nicht gelöscht werden.');return;}renderPerformance();renderDashboard();}
+    function snapshotPlot(snaps){
+      if(!snaps.length)return '<div class="empty-state">Noch kein gespeicherter Depotwert. Erfasse deine Positionen und speichere den ersten Stand.</div>';
+      const w=860,h=300,left=100,right=28,top=25,bottom=48,values=snaps.map(s=>s.value),low=Math.min(...values),high=Math.max(...values),pad=Math.max((high-low)*.15,high*.02,1),min=Math.max(0,low-pad),max=high+pad,t0=Date.parse(snaps[0].date),t1=Date.parse(snaps.at(-1).date);
+      const x=s=>left+(t1===t0?.5:(Date.parse(s.date)-t0)/(t1-t0))*(w-left-right),y=v=>top+(max-v)/(max-min)*(h-top-bottom);
+      const grid=Array.from({length:4},(_,i)=>{const v=min+(max-min)*i/3,Y=y(v);return '<line x1="'+left+'" y1="'+Y+'" x2="'+(w-right)+'" y2="'+Y+'" stroke="#334155"/><text x="'+(left-12)+'" y="'+(Y+4)+'" text-anchor="end" fill="#94a3b8" font-size="12">'+escHtml(number(v,0))+'</text>';}).join('');
+      const points=snaps.map(s=>'<circle cx="'+x(s)+'" cy="'+y(s.value)+'" r="5" fill="#38bdf8" stroke="#0f172a" stroke-width="2"><title>'+escHtml(s.date+' · '+money(s.value,'CHF'))+'</title></circle>').join('');
+      const dates=snaps.length===1?'<text x="'+x(snaps[0])+'" y="280" text-anchor="middle" fill="#94a3b8" font-size="12">'+snaps[0].date+'</text>':'<text x="'+left+'" y="280" fill="#94a3b8" font-size="12">'+snaps[0].date+'</text><text x="'+(w-right)+'" y="280" text-anchor="end" fill="#94a3b8" font-size="12">'+snaps.at(-1).date+'</text>';
+      return '<div style="overflow-x:auto"><svg style="width:100%;min-width:500px;height:auto;display:block" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Gespeicherte Depotwerte in CHF; genaue Werte in der Tabelle"><text x="'+left+'" y="14" fill="#94a3b8" font-size="12">CHF</text>'+grid+points+dates+'</svg></div>'+(snaps.length===1?'<p class="section-intro">Ein erster Stand ist gespeichert. Weitere Tage erscheinen als zusätzliche Punkte.</p>':'');
+    }
+    function snapshotOrigin(s){
+      if(!Array.isArray(s.positions))return 'Altbestand · Quellenzeit fehlt';
+      return s.positions.map(h=>escHtml(h.ticker+' · '+h.source+' · '+(h.quoteTime?new Date(h.quoteTime).toLocaleString('de-CH'):'Kurszeit fehlt'))).join('<br>')+'<br>FX: '+escHtml(s.ratesSource||'Quelle unbekannt')+' · '+escHtml(s.ratesTimestamp?new Date(s.ratesTimestamp).toLocaleString('de-CH'):'gespeichert / manuell · Zeit fehlt');
+    }
+    function renderPerformance(){
+      const snaps=validSnapshots();document.getElementById('perfChart').innerHTML=snapshotPlot(snaps);
+      document.getElementById('perfMetrics').innerHTML=metric('Letzter gespeicherter Wert',snaps.length?money(snaps.at(-1).value,'CHF'):'–',snaps.at(-1)?.date||'Noch kein Stand')+metric('Gespeicherte Stände',String(snaps.length),'Keine ergänzten oder simulierten Tage')+metric('Erster Stand',snaps[0]?.date||'–','Bewertung jeweils in CHF');
+      document.getElementById('snapTableWrap').innerHTML=snaps.length?'<table class="data-table"><thead><tr><th>Datum / gespeichert</th><th>Depotwert · CHF</th><th>Kursquellen / Kurszeiten</th><th></th></tr></thead><tbody>'+[...snaps].reverse().map(s=>'<tr><td>'+escHtml(s.date)+'<br><small>'+escHtml(s.capturedAt?new Date(s.capturedAt).toLocaleString('de-CH'):'Speicherzeit unbekannt')+'</small></td><td>'+money(s.value,'CHF')+'</td><td><small>'+snapshotOrigin(s)+'</small></td><td><button class="btn danger small" aria-label="Stand vom '+s.date+' löschen" onclick="deleteSnapshot(\''+s.date+'\')">Löschen</button></td></tr>').join('')+'</tbody></table>':'<div class="empty-state">Noch keine gespeicherten Stände.</div>';
+    }
+
+    let holdingWizardQuote=null,holdingWizardEpoch=0,holdingWizardTimer=null,holdingWizardSaving=false,holdingWizardOrigin='portfolio',holdingWizardFocus=null;
+    function openHoldingWizard(symbol=''){
+      const dialog=document.getElementById('holdingWizard');holdingWizardFocus=document.activeElement;holdingWizardOrigin=document.querySelector('.view-section.active')?.id||'portfolio';holdingWizardQuote=null;holdingWizardEpoch++;holdingWizardSaving=false;
+      document.getElementById('hwSearch').value=symbol;document.getElementById('hwShares').value='';document.getElementById('hwBuy').value='';document.getElementById('hwResults').innerHTML='';document.getElementById('hwQuote').innerHTML='';document.getElementById('hwDetails').hidden=true;document.getElementById('hwSuccess').hidden=true;document.getElementById('hwForm').hidden=false;document.getElementById('hwSave').disabled=false;document.getElementById('hwSave').textContent='Position speichern & analysieren';document.getElementById('hwStatus').textContent='Suche den Namen deiner Aktie, deines ETFs oder deiner Kryptowährung.';
+      if(!dialog.open)dialog.showModal();document.getElementById('hwSearch').focus();if(symbol)chooseHoldingAsset(symbol);
+    }
+    function closeHoldingWizard(){clearTimeout(holdingWizardTimer);holdingWizardEpoch++;document.getElementById('holdingWizard').close();holdingWizardFocus?.focus?.();}
+    function scheduleHoldingSearch(){holdingWizardQuote=null;holdingWizardEpoch++;document.getElementById('hwDetails').hidden=true;document.getElementById('hwQuote').innerHTML='';clearTimeout(holdingWizardTimer);holdingWizardTimer=setTimeout(searchHoldingAssets,350);}
+    async function searchHoldingAssets(){const input=document.getElementById('hwSearch'),query=input.value.trim(),box=document.getElementById('hwResults'),id=++holdingWizardEpoch;if(!query){box.innerHTML='';return;}document.getElementById('hwStatus').textContent='Passende Titel werden gesucht …';try{const d=await api('/api/search?q='+encodeURIComponent(query));if(id!==holdingWizardEpoch)return;box.innerHTML=(d.results||[]).map(x=>`<button class="wizard-result" type="button" onclick="chooseHoldingAsset('${escHtml(x.symbol)}')"><span><b>${escHtml(x.name)}</b><small>${escHtml(x.exchange)} · ${escHtml(x.type)}</small></span><b>${escHtml(x.symbol)} →</b></button>`).join('');document.getElementById('hwStatus').textContent=d.results?.length?'Wähle den Titel und Handelsplatz, den du tatsächlich besitzt.':'Kein Treffer. Versuche den genauen Ticker, z. B. NESN.SW.';}catch(e){if(id===holdingWizardEpoch)document.getElementById('hwStatus').textContent=e.message;}}
+    async function chooseHoldingAsset(symbol){
+      if(!validTicker(symbol))return;clearTimeout(holdingWizardTimer);const id=++holdingWizardEpoch;holdingWizardQuote=null;document.getElementById('hwStatus').textContent='Kurs und Handelswährung werden geprüft …';document.getElementById('hwDetails').hidden=true;document.getElementById('hwResults').innerHTML='';
+      try{const q=await fetchQuote(symbol);if(id!==holdingWizardEpoch)return;if(!Number.isFinite(q.price)||q.price<=0)throw new Error('Kein gültiger Kurs verfügbar.');if(!['CHF','EUR','USD','GBP'].includes(q.currency))throw new Error('Diese Position handelt in '+q.currency+'. Das Portfolio unterstützt bisher CHF, EUR, USD und GBP. Die Einzelaktienanalyse ist weiterhin verfügbar.');if(appData.holdings.some(h=>h.ticker===q.symbol))throw new Error('Diese Position ist bereits erfasst. Weitere Käufe kannst du unter Transaktionen eintragen.');holdingWizardQuote=q;document.getElementById('hwSearch').value=q.symbol;document.getElementById('hwClass').value=q.instrumentType==='ETF'?'ETF':q.instrumentType==='CRYPTOCURRENCY'?'Krypto':'Aktien';document.getElementById('hwQuote').innerHTML='<div class="wizard-quote"><div><b>'+escHtml(q.name)+'</b><p>'+escHtml(q.symbol+' · '+q.exchange)+'</p></div><strong>'+escHtml(money(q.price,q.currency))+'</strong><small>'+escHtml(quoteStamp(q)+' · '+q.source)+'</small></div>';document.getElementById('hwBuyLabel').textContent='Dein Kaufpreis je Stück in '+q.currency+' (optional)';document.getElementById('hwDetails').hidden=false;document.getElementById('hwStatus').textContent='Gib nur die Anzahl ein, die du tatsächlich besitzt. Es wird kein Kauf ausgeführt.';updateHoldingPreview();document.getElementById('hwShares').focus();}
+      catch(e){if(id===holdingWizardEpoch)document.getElementById('hwStatus').textContent=e.message;}
+    }
+    function updateHoldingPreview(){const q=holdingWizardQuote,n=Number(document.getElementById('hwShares').value);document.getElementById('hwPreview').textContent=q&&Number.isFinite(n)&&n>0?'Aktueller Positionswert: '+money(q.price*n,q.currency):'Deine Stückzahl eingeben – Bruchteile sind möglich.';}
+    async function saveGuidedHolding(){
+      if(holdingWizardSaving)return;const q=holdingWizardQuote,status=document.getElementById('hwStatus'),shares=Number(document.getElementById('hwShares').value),rawBuy=document.getElementById('hwBuy').value.trim(),buyPrice=rawBuy===''?null:Number(rawBuy);
+      if(!q){status.textContent='Wähle zuerst einen Titel aus der Suche.';return;}if(!Number.isFinite(shares)||shares<=0){status.textContent='Bitte eine Stückzahl grösser als 0 eingeben.';document.getElementById('hwShares').focus();return;}if(buyPrice!==null&&(!Number.isFinite(buyPrice)||buyPrice<=0)){status.textContent='Kaufpreis muss positiv sein. Wenn du ihn nicht kennst, lasse das Feld leer.';return;}if(appData.holdings.some(h=>h.ticker===q.symbol)){status.textContent='Diese Position wurde bereits gespeichert.';return;}if(!storageAvailable){status.textContent='Dein Gerätespeicher ist nicht verfügbar. Bitte sichere vorhandene Daten und öffne die App in einem normalen Browserfenster.';return;}
+      holdingWizardSaving=true;const saveEpoch=holdingWizardEpoch;const button=document.getElementById('hwSave');button.disabled=true;
+      const h={id:uid(),name:q.name,ticker:q.symbol,assetClass:document.getElementById('hwClass').value,shares,buyPrice,costKnown:buyPrice!==null,currentPrice:q.price,currency:q.currency,fees:0,quoteTime:q.quoteTime,priceSource:q.source,priceHistory:[{date:q.quoteTime?new Date(q.quoteTime).toISOString().slice(0,10):today(),price:q.price}]};
+      try{const next={...appData,holdings:[...appData.holdings,h]};localStorage.setItem(STORAGE_KEY,JSON.stringify(next));appData=next;personalLoadedAt=0;renderAll();document.getElementById('hwForm').hidden=true;document.getElementById('hwSuccess').hidden=false;document.getElementById('hwSavedText').textContent=q.name+' · '+shares+' Stück gespeichert. '+(buyPrice===null?'Kaufpreis unbekannt: Gewinn/Verlust bleibt offen.':'Dein Kaufpreis ist hinterlegt.');status.textContent='Gespeichert auf diesem Gerät. Die Portfolio-Auswertung wird geladen …';await refreshPersonalPortfolio();if(saveEpoch!==holdingWizardEpoch)return;status.textContent='Die verfügbaren Marktdaten sind geprüft. Wähle unten die gewünschte Auswertung.';}
+      catch(e){status.textContent=appData.holdings.some(x=>x.id===h.id)?'Position gespeichert. Die Ansicht konnte noch nicht vollständig aktualisiert werden. Bitte neu laden.':'Die Position konnte nicht gespeichert werden. Bitte prüfe den freien Browserspeicher.';}
+      finally{if(saveEpoch===holdingWizardEpoch){holdingWizardSaving=false;button.disabled=false;}}
+    }
+    function openSavedAnalysis(view){closeHoldingWizard();jumpTo(view);}
+    function openAdvancedHolding(){closeHoldingWizard();jumpTo('portfolio');document.getElementById('advancedHolding').open=true;document.getElementById('p_name').focus();}
+    function updateHoldingBasis(id,value){const h=appData.holdings.find(x=>x.id===id);if(!h)return;const raw=String(value).trim(),price=raw===''?null:Number(raw);if(price!==null&&(!Number.isFinite(price)||price<=0)){toast('Bitte einen positiven Kaufpreis eingeben oder das Feld leer lassen.');renderPortfolio();return;}h.buyPrice=price;h.costKnown=price!==null;saveData();renderAll();}
+
+    // ---------- PERSONAL PORTFOLIO ANALYSIS ----------
+    let personalMarket={},personalFx={},personalLoading=false,personalLoadedAt=0,personalErrors={},personalEpoch=0;
+    function personalAssessment(){return PortfolioMath.analyze(appData.holdings,personalMarket,personalFx,appData.settings.rates,appData.settings.investorProfile||{});}
+    function computeRisk(){const a=personalAssessment();return {score:a.model?a.model.volatility*100:null,label:a.model?'Historische Schwankung in % p.a.':'Marktdaten fehlen'};}
+    function personalEmpty(){return `<div class="portfolio-onboarding"><span class="eyebrow">DEINE ANALYSE STARTET HIER</span><h3>Welche Position besitzt du?</h3><p>Die App braucht deine tatsächliche Stückzahl. Erfasse deine erste Position direkt hier.</p><div class="setup-steps"><span><b>1</b> Titel auswählen</span><span><b>2</b> Stückzahl eingeben</span><span><b>3</b> Analyse ansehen</span></div><button class="btn" onclick="openHoldingWizard()">Meine erste Position erfassen</button><p class="section-intro">Du brauchst keinen Kaufpreis. Name, Kurs und Währung werden automatisch geladen.</p><details><summary>Ich möchte nur eine Aktie ansehen</summary><p class="section-intro">Diese Auswahl öffnet eine Einzelanalyse und fügt deinem Portfolio nichts hinzu.</p><div class="link-row"><button class="btn small secondary" onclick="openStockForecast('NVDA')">NVIDIA</button><button class="btn small secondary" onclick="openStockForecast('AAPL')">Apple</button><button class="btn small secondary" onclick="openStockForecast('NESN.SW')">Nestlé</button><button class="btn small secondary" onclick="jumpTo('suche')">Andere Aktie suchen</button></div></details></div>`;}
+    function metric(label,value,note=''){return '<div class="personal-metric"><span>'+escHtml(label)+'</span><b>'+escHtml(value)+'</b><small>'+escHtml(note)+'</small></div>';}
+    function assessmentCoverage(a){return '<p class="section-intro">Bewerteter Bestand: '+escHtml(money(a.total,'CHF'))+' · '+a.positions.length+' Positionen · '+number(a.quoteCoverage*100,1)+' % des Werts mit abgerufenen Kursen und Wechselkursen · '+number(a.historyCoverage*100,1)+' % mit ausreichenden Einzelreihen. Gemeinsame Datenabdeckung wird zusätzlich geprüft.</p>'+(a.unvalued.length?'<p class="personal-warning">Nicht bewertbar: '+escHtml(a.unvalued.join(', '))+'. Beträge und Anteile beziehen sich nur auf den bewertbaren Teil.</p>':'')+'<p class="section-intro">Gespeicherte oder manuelle Preise bleiben bei fehlenden Online-Daten sichtbar. Quellen und Kurszeiten stehen unten; „abgerufen“ bedeutet nicht garantiert in Echtzeit.</p>';}
+    function allocationBars(groups,total){return Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(([name,v])=>'<div class="allocation-row"><div class="allocation-line"><span>'+escHtml(name)+'</span><b>'+number(v/total*100,1)+' % · '+escHtml(money(v,'CHF'))+'</b></div><div class="allocation-track"><div class="allocation-fill" style="width:'+Math.min(100,v/total*100)+'%"></div></div></div>').join('');}
+    function personalHints(a){const p=a.profile,h=[];if(!p.goal||!p.months||!p.lossLimit||!p.positionLimit)h.push('Dein Profil ist noch unvollständig. Hinterlege Ziel, Anlagehorizont und Grenzen unter Risiko.');if(p.months)h.push('Dein Anlagehorizont: '+p.months+' Monate. Historische Szenarien ersetzen keinen Plan für diesen Zeitraum.');if(p.goal)h.push('Dein Ziel: '+({preserve:'Kapital erhalten',grow:'Vermögen aufbauen',income:'regelmässige Erträge'})[p.goal]+'. '+(p.goal==='income'?'Dividenden und Ausschüttungen sind im Kursmodell nicht als künftige Einnahmen geplant.':p.goal==='preserve'?'Auch ein geringer historischer Rückgang garantiert keinen Kapitalerhalt.':'Es wird keine feste jährliche Rendite unterstellt.'));if(p.positionLimit){const large=a.positions.filter(x=>x.weight*100>p.positionLimit);h.push(large.length?'Über deiner Positionsgrenze von '+p.positionLimit+' %: '+large.map(x=>x.ticker+' ('+number(x.weight*100,1)+' %)').join(', ')+'.':'Keine erfasste Position überschreitet deine Grenze von '+p.positionLimit+' %.');}if(a.model&&p.lossLimit){const loss=-a.model.maxDrawdown*100;h.push('Deine Verlustgrenze: '+p.lossLimit+' % ('+money(a.total*p.lossLimit/100,'CHF')+'). Der historische Modellrückgang von '+number(loss,1)+' % '+(loss>p.lossLimit?'überschritt':'unterschritt')+' diese Grenze. Künftige Verluste können grösser sein.');}if(p.months&&p.months<=12)h.push('Du planst innerhalb eines Jahres. Prüfe separat, welcher Betrag bis dahin verfügbar bleiben muss; diese App kennt deine Rücklagen und Verpflichtungen nicht.');if(a.historyCoverage<.999999)h.push('Fehlende Kursreihen verhindern eine belastbare Kennzahl für dein gesamtes Portfolio. Die fehlenden Positionen werden nicht als risikolos gewertet.');return h.map(s=>'<p class="personal-warning">'+escHtml(s)+'</p>').join('');}
+    function renderRisiko(){const a=personalAssessment(),box=document.getElementById('personalRisk');if(!a.positions.length){box.innerHTML=personalEmpty();return;}const m=a.model;box.innerHTML=assessmentCoverage(a)+(m?'<div class="personal-metrics">'+metric('Schwankung · annualisiert',number(m.volatility*100,1)+' %','Aus gemeinsamen Renditebeobachtungen')+metric('Grösster Modellrückgang',number(m.maxDrawdown*100,1)+' %',money(a.total*(-m.maxDrawdown),'CHF')+' auf heutigen Wert übertragen')+metric('Schlechtestes Tagesintervall',number(m.worstDay*100,2)+' %','Nicht die maximal mögliche Verlusthöhe')+'</div><p class="section-intro">Datenzeitraum '+m.start+' bis '+m.end+' · '+m.observations+' gemeinsame Renditebeobachtungen.</p>'+ (m.stale?'<p class="personal-warning">Die letzte gemeinsame Beobachtung ist älter als sieben Tage. Die Auswertung ist nicht aktuell.</p>':''):'')+'<p class="section-intro">'+escHtml(a.reason)+'</p>'+personalHints(a)+'<h3>Deine Positionen und Datenquellen</h3><div class="personal-table"><table class="data-table"><thead><tr><th>Position</th><th>Wert · CHF</th><th>Anteil</th><th>Kursquelle / Zeit</th><th>Historie</th></tr></thead><tbody>'+a.positions.map(x=>'<tr><td>'+escHtml(x.name)+'<br>'+escHtml(x.ticker)+'</td><td>'+escHtml(money(x.value,'CHF'))+'</td><td>'+number(x.weight*100,1)+' %</td><td>'+escHtml(x.source)+'<br>'+escHtml(x.quoteTime?new Date(x.quoteTime).toLocaleString('de-CH'):'Keine Anbieterzeit')+(x.fxOnline?'':'<br>Wechselkurs: gespeicherte Einstellung')+'</td><td>'+(x.historyValid?'Einzelreihe vorhanden':'Fehlt / zu kurz')+(personalErrors[x.ticker]?'<br>'+escHtml(personalErrors[x.ticker]):'')+'</td></tr>').join('')+'</tbody></table></div>';}
+    function renderDiversifikation(){const a=personalAssessment(),box=document.getElementById('personalDiversification');if(!a.positions.length){box.innerHTML=personalEmpty();document.getElementById('personalInsights').textContent='Noch keine Positionen erfasst.';return;}box.innerHTML=assessmentCoverage(a)+'<div class="personal-metrics">'+metric('Grösste Position',number(a.largest*100,1)+' %')+metric('Drei grösste Positionen',number(a.top3*100,1)+' %')+metric('Effektive Positionszahl',number(a.effectiveCount,1),'1 / Summe der quadrierten Gewichte')+'</div><p class="section-intro">Die effektive Positionszahl misst nur die Gewichtskonzentration. Sie erfasst keine ETF-Inhalte oder gemeinsamen Unternehmensrisiken.</p><h3>Positionen</h3>'+allocationBars(a.groups.positions,a.total)+'<h3>Anlageklassen · deine Zuordnung</h3>'+allocationBars(a.groups.classes,a.total)+'<h3>Handelswährungen</h3>'+allocationBars(a.groups.currencies,a.total)+'<p class="section-intro">Handelswährung ist nicht gleich wirtschaftliches Währungsrisiko. Sektoren, Länder und ETF-Überschneidungen sind noch nicht angebunden.</p>'+(a.model?.pairs.length?'<h3>Ähnlichste historische Kursbewegungen</h3><div class="personal-table"><table class="data-table"><thead><tr><th>Positionen</th><th>Korrelation · −1 bis +1</th></tr></thead><tbody>'+a.model.pairs.map(x=>'<tr><td>'+escHtml(x.a+' / '+x.b)+'</td><td>'+number(x.correlation,2)+'</td></tr>').join('')+'</tbody></table></div><p class="section-intro">Auf gemeinsamen Kurstagen in CHF. Nähe +1 bedeutet ähnliche historische Bewegungen; künftige Zusammenhänge können sich ändern.</p>':'<p class="section-intro">Für einen Korrelationsvergleich fehlen gemeinsame Kursreihen oder mindestens zwei schwankende Positionen.</p>');document.getElementById('personalInsights').innerHTML=personalHints(a);}
+    function renderPrognose(){
+      const a=personalAssessment(),box=document.getElementById('personalScenarios'),stress=document.getElementById('personalStress');
+      if(!a.positions.length){box.innerHTML=personalEmpty();stress.textContent='Bitte zuerst Positionen erfassen.';return;}
+      const days=Number(document.getElementById('scenarioDays').value)||30,s=a.model?.scenarios[days],windows=s?.windows||[];
+      box.innerHTML=assessmentCoverage(a)+(windows.length?'<h3>Zuletzt beobachtete Modellzeiträume</h3><p class="section-intro">'+windows.length+' überlappende Zeiträume von mindestens '+days+' Kalendertagen verfügbar. Die letzten fünf stehen unten. Prozentwerte sind historische Modelländerungen, keine erwarteten Renditen.</p><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Von</th><th>Bis</th><th>Historische Änderung</th></tr></thead><tbody>'+windows.slice(-5).reverse().map(w=>'<tr><td>'+escHtml(w.start)+'</td><td>'+escHtml(w.end)+'</td><td>'+(w.return>=0?'+':'')+number(w.return*100,2)+' %</td></tr>').join('')+'</tbody></table></div>':'<p class="personal-warning">'+escHtml(a.model?'Für diesen Zeitraum gibt es noch kein vollständiges historisches Vergleichsfenster.':a.reason)+'</p>')+(a.model?.stale?'<p class="personal-warning">Datengrundlage älter als sieben Tage. Vor einer Beurteilung aktualisieren.</p>':'')+'<p class="section-intro">Berechnung: tägliche Kursänderungen je Position × heutiges Depotgewicht; Verkettung über den angegebenen Zeitraum. Historische CHF-Wechselkurse, hypothetisches tägliches Rebalancing. Keine tatsächliche Depotperformance; keine Gebühren, Steuern oder Einzahlungen. Überlappende Zeiträume sind keine unabhängigen Stichproben.</p>';
+      const raw=document.getElementById('personalShock').value,shock=Number(raw);
+      if(raw.trim()===''||!Number.isFinite(shock)||shock< -100||shock>100){stress.textContent='Optional: Gib deine eigene Annahme zwischen −100 % und +100 % ein. Ohne Eingabe wird kein Betrag berechnet.';return;}
+      stress.innerHTML='<div class="personal-metrics">'+metric('Deine Annahme: '+shock+' %',money(a.total*(1+shock/100),'CHF'),money(a.total*shock/100,'CHF')+' rechnerische Veränderung')+'</div><p class="section-intro">Reine Rechenhilfe auf Basis deiner Eingabe, keine Prognose.</p>'+(a.profile.lossLimit&&shock< -a.profile.lossLimit?'<p class="personal-warning">Deine Annahme überschreitet deine persönliche Verlustgrenze.</p>':'');
+    }
+    function renderPersonalViews(){renderRisiko();renderDiversifikation();renderPrognose();}
+    function fillInvestorProfile(){const p=PortfolioMath.profile(appData.settings.investorProfile||{});document.getElementById('profileGoal').value=p.goal||'';document.getElementById('profileMonths').value=p.months??'';document.getElementById('profileLoss').value=p.lossLimit??'';document.getElementById('profilePosition').value=p.positionLimit??'';}
+    function saveInvestorProfile(){const p={goal:document.getElementById('profileGoal').value},status=document.getElementById('profileStatus');for(const [key,id,min,max] of [['months','profileMonths',1,600],['lossLimit','profileLoss',1,100],['positionLimit','profilePosition',1,100]]){const raw=document.getElementById(id).value;if(raw!==''){const n=Number(raw);if(!Number.isFinite(n)||n<min||n>max){status.textContent='Bitte gültige Werte eingeben: Horizont 1–600 Monate; Grenzen 1–100 %.';return;}p[key]=n;}}appData.settings.investorProfile=PortfolioMath.profile(p);saveData();status.textContent=storageAvailable?'Profil auf diesem Gerät gespeichert. In deinem Backup enthalten.':'Profil gilt in dieser Sitzung; Gerätespeicher nicht verfügbar.';renderPersonalViews();renderDashboard();}
+    let personalRefreshPromise=null,personalRefreshQueued=false;
+    function refreshPersonalPortfolio(){
+      if(personalRefreshPromise){personalRefreshQueued=true;return personalRefreshPromise;}
+      personalRefreshPromise=(async()=>{do{personalRefreshQueued=false;await loadPersonalPortfolio();}while(personalRefreshQueued);})().finally(()=>{personalRefreshPromise=null;});return personalRefreshPromise;
+    }
+    async function loadPersonalPortfolio(){
+      if(personalLoading)return;if(!appData.holdings.length){renderPersonalViews();return;}personalLoading=true;const epoch=++personalEpoch;
+      const holdings=appData.holdings.map(x=>({...x})),tickers=[...new Set(holdings.filter(x=>x.assetClass!=='Bargeld').map(x=>x.ticker))],currencies=[...new Set(holdings.map(x=>x.currency).filter(c=>c!=='CHF'))],jobs=[...tickers.map(symbol=>({symbol})),...currencies.map(currency=>({currency,symbol:currency+'CHF=X'}))];let next=0,done=0;const market={},fx={},errors={};
+      const updateStatus=message=>document.querySelectorAll('.personal-status').forEach(x=>x.textContent=message);updateStatus('Deine Kurs- und Wechselkursreihen werden geladen …');
+      try{await Promise.all(Array.from({length:Math.min(3,jobs.length)},async()=>{while(next<jobs.length){const job=jobs[next++];try{const d=await api('/api/portfolio-history?symbol='+encodeURIComponent(job.symbol));if(d.symbol!==job.symbol)throw new Error('Abweichender Ticker in der Antwort.');if(job.currency){if(d.currency!=='CHF')throw new Error('Abweichende Wechselkurswährung.');fx[job.currency]=d;}else market[job.symbol]=d;}catch(e){errors[job.symbol]=e.message;}finally{done++;updateStatus(done+' / '+jobs.length+' Kursreihen geprüft …');}}}));if(epoch!==personalEpoch)return;personalMarket=market;personalFx=fx;personalErrors=errors;personalLoadedAt=Date.now();renderPersonalViews();renderDashboard();updateStatus('Abgerufen: '+new Date(personalLoadedAt).toLocaleString('de-CH')+' · Yahoo Finance · '+Object.keys(errors).length+' fehlgeschlagene Abfragen. Auswertung nur für deine erfassten Positionen.');}
+      finally{if(epoch===personalEpoch)personalLoading=false;}
+    }
+
+    // ---------- EXPORT ----------
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function toCsv(rows,headers){const esc=v=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};return '\uFEFF'+[headers.map(esc).join(';'),...rows.map(r=>headers.map(h=>esc(r[h])).join(';'))].join('\r\n');}
+    function exportCsv(kind){const cols={holdings:['name','ticker','assetClass','shares','buyPrice','costKnown','currentPrice','currency','fees'],transactions:['date','type','ticker','shares','price','fee','currency','realized','note'],dividends:['date','ticker','amount','currency','note']};if(cols[kind])downloadBlob(toCsv(appData[kind],cols[kind]),'investpro-'+kind+'.csv','text/csv;charset=utf-8');}
+
+    // ---------- BACKUP ----------
+    function exportBackup() { downloadBlob(JSON.stringify(appData, null, 2), 'investpro-backup.json', 'application/json'); }
+    function importBackup(event){const file=event.target.files[0];if(!file)return;if(file.size>5000000){alert('Das Backup ist zu gross (maximal 5 MB).');return;}const reader=new FileReader();reader.onload=()=>{try{const incoming=normalizeData(JSON.parse(reader.result));if(!confirm('Geprüftes Backup importieren? Deine aktuellen Daten werden ersetzt.'))return;try{localStorage.setItem(STORAGE_KEY,JSON.stringify(incoming));}catch{alert('Das Backup konnte nicht dauerhaft gespeichert werden. Deine bisherigen Daten bleiben erhalten.');return;}appData=incoming;renderAll();toast('Backup importiert.');}catch(e){alert('Backup nicht importiert: '+e.message);}};reader.readAsText(file);event.target.value='';}
+
+    // ---------- EINSTELLUNGEN ----------
+    function updateSettings() {
+      document.getElementById('fxStatus').textContent='Manuelle Wechselkurse · Werte in den Eingabefeldern';
+      appData.settings.ratesTimestamp=null;appData.settings.ratesSource='Manuell';
+      appData.settings.currency = document.getElementById('s_currency').value;
+      appData.settings.rates = {CHF:1,EUR:Math.max(.0001,Number(document.getElementById('rate_EUR').value)||.94),USD:Math.max(.0001,Number(document.getElementById('rate_USD').value)||1.18),GBP:Math.max(.0001,Number(document.getElementById('rate_GBP').value)||.81)};
+      saveData(); renderAll();
+    }
+    function resetAll() {
+      if (!confirm('Wirklich alle Daten unwiderruflich löschen?')) return;
+      storageAvailable=true;
+      appData = { settings: { currency: appData.settings.currency, rates:appData.settings.rates }, holdings: [], transactions: [], dividends: [], watchlist: [], notes: [], snapshots: [] };
+      saveData(); renderAll();
+    }
+
+    function renderAll() {
+      autoSnapshot();
+      document.getElementById('s_currency').value = appData.settings.currency || 'CHF';
+      document.getElementById('rate_EUR').value = appData.settings.rates?.EUR || .94;
+      document.getElementById('rate_USD').value = appData.settings.rates?.USD || 1.18;
+      document.getElementById('rate_GBP').value = appData.settings.rates?.GBP || .81;
+      renderDashboard(); renderPortfolio(); renderKurse(); renderNotes(); renderTransaktionen();
+      renderDividenden(); renderWatchlist(); renderPerformance(); renderRisiko(); renderDiversifikation(); renderPrognose();
+      renderSucheResults();
+    }
+
+    let marketBusy=false,quickRequest=0,detailRequest=0,catalogRows=[],currentStock=null;
+    const searchRequests={};
+    async function api(path){
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),35000);
+      try{const r=await fetch(path,{signal:controller.signal});let d;try{d=await r.json();}catch{throw new Error('Die Antwort konnte nicht gelesen werden. Bitte erneut laden.');}if(!r.ok)throw new Error(d.error||'Marktdaten sind vorübergehend nicht verfügbar.');return d;}
+      catch(e){if(e.name==='AbortError')throw new Error('Die Abfrage dauert zu lange. Bitte erneut versuchen.');throw e;}
+      finally{clearTimeout(timer);}
+    }
+    function money(value,currency){if(!Number.isFinite(value))return '–';if(!currency)return value.toLocaleString('de-CH',{maximumFractionDigits:4});try{return value.toLocaleString('de-CH',{style:'currency',currency,maximumFractionDigits:value<1?6:2});}catch{return value.toLocaleString('de-CH')+' '+currency;}}
+    function number(value,digits=2){return Number.isFinite(value)?value.toLocaleString('de-CH',{maximumFractionDigits:digits}):'–';}
+    function changeLabel(value){return Number.isFinite(value)?(value>=0?'+':'')+number(value)+' %':'Tagesänderung nicht verfügbar';}
+    function quoteStamp(q){return q.quoteTime?'Kursstand: '+new Date(q.quoteTime).toLocaleString('de-CH'):'Kurszeit nicht verfügbar';}
+    function toast(message){const el=document.getElementById('appToast');el.textContent=message;el.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.hidden=true,4500);}
+    function stopQuickMonitor(){clearInterval(quickStockMonitor);quickStockMonitor=null;document.getElementById('quickMonitorButton').textContent='Beobachtung starten';document.getElementById('quickMonitorInfo').textContent='Beobachtung ist aus. Aktualisierung nur bei geöffneter App.';}
+    async function resolveSymbol(query){const q=query.trim();let d;try{d=await api('/api/search?q='+encodeURIComponent(q));}catch(e){if(validTicker(q.toUpperCase()))return q.toUpperCase();throw e;}const exact=d.results?.find(x=>x.symbol.toLowerCase()===q.toLowerCase());if(exact)return exact.symbol;if(d.results?.length)return d.results[0].symbol;if(/^[a-zA-Z0-9.^=\-]{1,20}$/.test(q))return q.toUpperCase();throw new Error(d.providerAvailable?'Kein passender Ticker gefunden. Bitte den Börsenticker eingeben.':'Die Namenssuche ist gerade nicht erreichbar. Bitte direkt einen Börsenticker wie AAPL eingeben.');}
+    async function searchBox(inputId,boxId,action){const input=document.getElementById(inputId),box=document.getElementById(boxId),q=input.value.trim(),id=(searchRequests[inputId]||0)+1;searchRequests[inputId]=id;if(!q){box.classList.remove('show');return;}box.classList.add('show');box.innerHTML='<div class="stock-result">Suche läuft …</div>';try{const d=await api('/api/search?q='+encodeURIComponent(q));if(searchRequests[inputId]!==id||input.value.trim()!==q)return;box.innerHTML=(d.message?'<p class="section-intro" style="padding:10px">'+escHtml(d.message)+'</p>':'')+(d.results.length?d.results.map(x=>`<button class="stock-result" onclick="${action}('${escHtml(x.symbol)}')"><span><b>${escHtml(x.name)}</b><br><small>${escHtml(x.exchange)} · ${escHtml(x.type)}</small></span><b>${escHtml(x.symbol)}</b></button>`).join(''):'<div class="stock-result">Kein Treffer. Versuche den Börsenticker, zum Beispiel NESN.SW.</div>');}catch(e){if(searchRequests[inputId]===id)box.textContent=e.message;}}
+    function trendHTML(t){return t?`<div class="signal-panel"><b class="scanner-signal" style="color:${t.direction==='Steigend'?'var(--accent-green)':t.direction==='Fallend'?'var(--accent-red)':'var(--accent-amber)'}">${t.direction==='Steigend'?'↗':t.direction==='Fallend'?'↘':'→'} ${escHtml(t.direction)}</b><p>Signalstärke <b>${t.confidence}/100</b></p><p class="section-intro">5 Handelstage: ${changeLabel(t.change5)}<br>20 Handelstage: ${changeLabel(t.change20)}</p></div>`:'<div class="signal-panel">Für ein Trendsignal liegen noch nicht genug Kurse vor.</div>';}
+    function stockHeader(q){return `<div class="stock-heading"><div><p class="section-intro">${escHtml(q.symbol)} · ${escHtml(q.exchange)}</p><h2>${escHtml(q.name)}</h2><div class="stock-price">${escHtml(money(q.price,q.currency))}</div><p style="color:${q.change>=0?'var(--accent-green)':'var(--accent-red)'}">${changeLabel(q.change)} zum vorherigen Handelstag</p></div>${trendHTML(q.forecast)}</div><p class="quote-meta">${escHtml(quoteStamp(q))} · ${escHtml(q.marketState)}<br>Quelle: ${escHtml(q.source)} · ${escHtml(q.delayNotice)}</p>`;}
+    function sparkline(history,id){if(!history?.length)return '<p class="section-intro">Kein Kursverlauf verfügbar.</p>';const values=history.map(x=>x.close),min=Math.min(...values),max=Math.max(...values),span=max-min||1;const points=values.map((v,i)=>`${(i/Math.max(1,values.length-1)*800).toFixed(1)},${(175-(v-min)/span*150).toFixed(1)}`).join(' ');return `<svg role="img" aria-label="Kursverlauf von ${escHtml(history[0].date)} bis ${escHtml(history.at(-1).date)}" viewBox="0 0 800 200" class="price-spark"><polyline points="${points}" fill="none" stroke="#38bdf8" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg><div class="chart-axis"><span>${escHtml(history[0].date)}</span><span>${escHtml(history.at(-1).date)}</span></div><p class="section-intro">Tief: ${number(min)} · Hoch: ${number(max)} · ${values.length} Tageskurse</p>`;}
+    let detailTimer=null,detailEpoch=0,detailBusy=false,detailAuto=true,detailRange='live',intradayStock=null;
+    function stopDetailLive(){clearInterval(detailTimer);detailTimer=null;detailEpoch++;detailBusy=false;}
+    function startDetailLive(){clearInterval(detailTimer);detailTimer=setInterval(()=>{if(!document.hidden&&document.getElementById('ki').classList.contains('active'))refreshDetailLive();},30000);}
+    function toggleDetailLive(){detailAuto=!detailAuto;document.getElementById('detailLiveToggle').textContent=detailAuto?'Aktualisierung pausieren':'Alle 30 s aktualisieren';if(detailAuto){startDetailLive();refreshDetailLive();}else{clearInterval(detailTimer);detailTimer=null;document.getElementById('detailLiveStatus').textContent='Pausiert · Kurszeit bleibt sichtbar';}}
+    function minuteChart(rows){
+      const a=rows.filter(x=>Number.isFinite(x.timestamp)&&Number.isFinite(x.close));if(!a.length)return '<p class="section-intro">Für diesen Zeitraum sind keine Minutenkurse verfügbar. Der letzte Kurs steht oben.</p>';
+      const min=Math.min(...a.map(x=>x.close)),max=Math.max(...a.map(x=>x.close)),span=max-min||Math.max(min*.001,.01),start=a[0].timestamp,end=a.at(-1).timestamp;
+      const x=t=>40+(t-start)/Math.max(60000,end-start)*720,y=v=>170-(v-min)/span*140,time=t=>new Date(t).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
+      const points=a.map(r=>x(r.timestamp).toFixed(1)+','+y(r.close).toFixed(1)).join(' ');
+      return `<svg role="img" aria-label="Minutenkurse von ${time(start)} bis ${time(end)}" viewBox="0 0 800 200" class="price-spark"><polyline points="${points}" fill="none" stroke="#38bdf8" stroke-width="2.5" vector-effect="non-scaling-stroke"/><circle cx="${x(end)}" cy="${y(a.at(-1).close)}" r="4" fill="#38bdf8"/></svg><div class="chart-axis"><span>${time(start)}</span><span>${time(end)}</span></div><p class="section-intro">${new Date(start).toLocaleDateString('de-CH')} · ${a.length} Minutenpunkte · Tief ${number(min)} · Hoch ${number(max)} · Uhrzeit in deiner Zeitzone</p>`;
+    }
+    function renderStockChart(range){
+      if(!currentStock)return;detailRange=String(range);
+      const short=['live','5m','1h','1d'].includes(detailRange),box=document.getElementById('stockChart');
+      if(short){const all=intradayStock?.history||[],last=all.at(-1)?.timestamp,minutes=detailRange==='5m'?5:detailRange==='1h'?60:detailRange==='live'?30:null;const rows=minutes?all.filter(x=>x.timestamp>=last-minutes*60000):all;box.innerHTML=intradayStock?minuteChart(rows):'<p class="section-intro">Minutenkurse werden geladen …</p>';}
+      else{const days=Number(range);box.innerHTML=sparkline(days?currentStock.history.slice(-days):currentStock.history,'detail');}
+      document.querySelectorAll('[data-chart-range]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.chartRange===detailRange)));
+      const note=document.getElementById('detailChartNote');note.textContent=short?(detailRange==='live'?'Letzte 30 verfügbare Handelsminuten. ':'')+'Historie: 1-Minuten-Punkte von Yahoo. Abruf alle 30 Sekunden bei sichtbarer Seite; kein Sekundenfeed. Bei geschlossener Börse bleibt die letzte Sitzung sichtbar.':'Tageskurse von Yahoo Finance. Die aktuelle Kursanzeige darüber wird separat aktualisiert.';
+    }
+    function renderSourceComparison(d){
+      const box=document.getElementById('stockSources');box.innerHTML=d.sources.map(s=>`<div class="source-row"><b>${escHtml(s.name)}</b><span>${s.quote?escHtml(money(s.quote.price,s.quote.currency)):'Nicht verbunden / nicht verfügbar'}</span><small>${escHtml(s.quote?quoteStamp(s.quote):s.message)}</small></div>`).join('')+`<p class="section-intro">${d.comparison.comparable?'Kursabweichung: '+number(d.comparison.deviationPercent,3)+' % · ':''}${escHtml(d.comparison.message)} Mehrere Quellen garantieren keine 99,9 % Genauigkeit oder Prognosesicherheit.</p>`;
+    }
+    async function refreshDetailLive(){
+      if(!currentStock||detailBusy||document.hidden)return;detailBusy=true;const epoch=detailEpoch,symbol=currentStock.symbol,status=document.getElementById('detailLiveStatus');status.textContent='Aktuellen Kurs abrufen …';
+      try{const d=await api('/api/intraday?symbol='+encodeURIComponent(symbol));if(epoch!==detailEpoch||currentStock?.symbol!==symbol)return;intradayStock=d;const {history,sources,comparison,...q}=d;currentStock={...currentStock,...q};document.getElementById('stockLiveHeader').innerHTML=stockHeader(currentStock);renderStockChart(detailRange);renderSourceComparison(d);status.textContent=(detailAuto?'Aktualisierung alle 30 s':'Pausiert')+' · Zuletzt abgerufen: '+new Date().toLocaleTimeString('de-CH')+' · '+quoteStamp(d);}
+      catch(e){if(epoch===detailEpoch){status.textContent='Abruf fehlgeschlagen: '+e.message+' Letzter Kurs bleibt sichtbar.';if(!intradayStock&&['live','5m','1h','1d'].includes(detailRange))document.getElementById('stockChart').innerHTML='<p class="section-intro">Minutenkurse nicht verfügbar. Bitte „Jetzt aktualisieren“ versuchen oder einen längeren Zeitraum wählen.</p>';document.getElementById('stockSources').textContent='Quellenvergleich derzeit nicht verfügbar; letzte Kurszeit oben beachten.';}}
+      finally{if(epoch===detailEpoch)detailBusy=false;}
+    }
+    function showStockDetails(q){stopDetailLive();currentStock=q;intradayStock=null;detailRange='live';detailAuto=true;const t=q.technical;document.getElementById('kiOutput').innerHTML='<div id="stockLiveHeader">'+stockHeader(q)+'</div>'+`<div class="link-row" style="margin:16px 0"><button class="btn small" onclick="watchStock('${escHtml(q.symbol)}','${escHtml(encodeURIComponent(q.name).replace(/'/g,'%27'))}')">☆ Zur Watchlist</button><button class="btn small secondary" onclick="prepareHolding()">Zum Portfolio hinzufügen</button></div><div class="detail-block"><div class="chart-header"><h3>Kursverlauf · ${escHtml(q.currency||'')}</h3><div class="link-row"><button class="btn small secondary" data-chart-range="live" onclick="renderStockChart('live')">Live · 30 s</button><button class="btn small secondary" data-chart-range="5m" onclick="renderStockChart('5m')">5 Minuten</button><button class="btn small secondary" data-chart-range="1h" onclick="renderStockChart('1h')">1 Stunde</button><button class="btn small secondary" data-chart-range="1d" onclick="renderStockChart('1d')">1 Tag</button><button class="btn small secondary" data-chart-range="21" onclick="renderStockChart(21)">1 Monat</button><button class="btn small secondary" data-chart-range="63" onclick="renderStockChart(63)">3 Monate</button><button class="btn small secondary" data-chart-range="0" onclick="renderStockChart(0)">1 Jahr</button></div></div><div id="stockChart"></div><p id="detailChartNote" class="section-intro"></p><div class="link-row"><button class="btn small secondary" id="detailLiveToggle" onclick="toggleDetailLive()">Aktualisierung pausieren</button><button class="btn small secondary" onclick="refreshDetailLive()">Jetzt aktualisieren</button></div><p id="detailLiveStatus" class="quote-meta" role="status">Minutenkurse werden geladen …</p></div><div class="detail-block"><h3>Datenquellen vergleichen</h3><div id="stockSources">Quellen werden geprüft …</div></div><div class="detail-block"><h3>Technische Kennzahlen</h3><p class="section-intro">Analyse-Stand: ${escHtml(quoteStamp(q))}. Diese Tagesanalyse wird beim erneuten Öffnen aktualisiert.</p>${t?`<div class="indicator-grid">${[['RSI · 14',number(t.rsi,1)],['MACD · 12/26',number(t.macd,4)],['MACD-Signallinie · 9',number(t.macdSignalValue,4)],['SMA · 20',number(t.sma20)],['SMA · 50',number(t.sma50)],['Volatilität · annualisiert',number(t.volatility)+' %']].map(([label,value])=>`<div><span>${label}</span><b>${value}</b></div>`).join('')}</div><p class="section-intro">${escHtml(t.method)} Beta ist in der Portfolio-Analyse verfügbar.</p>`:'<p class="section-intro">Für die Kennzahlen werden mindestens 50 Tageskurse benötigt.</p>'}</div><div class="detail-block"><h3>Nachrichten zu ${escHtml(q.symbol)}</h3>${q.news.items.length?q.news.items.map(n=>`<a class="news-link" href="${escHtml(n.url)}" target="_blank" rel="noopener noreferrer"><b>${escHtml(n.title)}</b><small>${escHtml(n.publisher)}${n.timestamp?' · '+new Date(n.timestamp).toLocaleDateString('de-CH'):''} ↗</small></a>`).join(''):`<p class="section-intro">${q.news.available?'Der Anbieter liefert aktuell keine zugeordneten Meldungen.':'Nachrichten sind vorübergehend nicht erreichbar.'}</p>`}</div><p class="section-intro">KGV, Wachstum, Free Cashflow, ROIC und Makrodaten sind derzeit nicht angebunden. Das Trendsignal verwendet ausschliesslich Kursdaten.</p>`;renderStockChart('live');refreshDetailLive();startDetailLive();}
+    function prepareHolding(){if(currentStock)openHoldingWizard(currentStock.symbol);}
+    function watchStock(symbol,encodedName){if(!validTicker(symbol))return;if(appData.watchlist.some(x=>x.ticker===symbol)){toast('Diese Aktie steht bereits auf deiner Watchlist.');return;}appData.watchlist.push({id:uid(),name:decodeURIComponent(encodedName),ticker:symbol,note:''});saveData();renderWatchlist();toast(symbol+' zur Watchlist hinzugefügt.');}
+    async function loadCatalog(){const box=document.getElementById('stockCatalog');try{const d=await api('/api/catalog');catalogRows=d.results;renderCatalog();}catch(e){box.textContent=e.message;}}
+    function renderCatalog(){const region=document.getElementById('catalogRegion').value,query=document.getElementById('catalogFilter').value.toLowerCase();const rows=catalogRows.filter(x=>(!region||x.region===region)&&(x.name+' '+x.symbol).toLowerCase().includes(query));document.getElementById('stockCatalog').innerHTML=rows.length?rows.map(x=>`<button class="catalog-item" onclick="openStockForecast('${escHtml(x.symbol)}')"><b>${escHtml(x.symbol)}</b><span>${escHtml(x.name)}</span><small>${escHtml(x.exchange)} ↗</small></button>`).join(''):'<p class="section-intro">Kein Treffer in der Auswahl. Nutze oben die internationale Suche.</p>';}
+    function normalizeData(d){
+      if(!d||typeof d!=='object'||Array.isArray(d))throw new Error('Ungültiges Backup.');
+      for(const k of ['holdings','transactions','dividends','watchlist','notes','snapshots'])if(d[k]!=null&&!Array.isArray(d[k]))throw new Error('Ungültiges Datenformat: '+k);
+      if(!Array.isArray(d.holdings))throw new Error('Das Backup enthält kein Portfolio.');
+      const out={settings:{currency:'CHF',rates:{CHF:1,EUR:.94,USD:1.18,GBP:.81},...d.settings},holdings:[],transactions:[],dividends:[],watchlist:[],notes:[],snapshots:[]};
+      if(!['CHF','EUR','USD','GBP'].includes(out.settings.currency))throw new Error('Nicht unterstützte Anzeigewährung.');
+      out.settings.rates={CHF:1,EUR:.94,USD:1.18,GBP:.81,...d.settings?.rates};for(const c of ['CHF','EUR','USD','GBP'])if(!Number.isFinite(out.settings.rates[c])||out.settings.rates[c]<=0)throw new Error('Ungültiger Wechselkurs.');out.settings.rates.CHF=1;
+      const seen=new Set();for(const k of ['holdings','transactions','dividends','watchlist','notes','snapshots']){out[k]=(d[k]||[]).map(row=>{if(!row||typeof row!=='object'||Array.isArray(row))throw new Error('Ungültiger Eintrag.');const r={...row};if(k!=='snapshots')r.id=/^[a-zA-Z0-9_-]{1,80}$/.test(r.id||'')?r.id:uid();if(r.ticker!=null){r.ticker=String(r.ticker).toUpperCase();if(!validTicker(r.ticker))throw new Error('Ungültiger Ticker im Backup.');}for(const field of ['shares','buyPrice','currentPrice','price','amount','fee','fees','value'])if(r[field]!=null&&(!Number.isFinite(Number(r[field]))||Number(r[field])<0))throw new Error('Ungültige Zahl im Backup.');if(k==='transactions'){for(const field of ['beforeHolding','afterHolding'])if(r[field]!=null)r[field]=normalizeData({holdings:[r[field]]}).holdings[0];}if(k==='holdings'){if(!r.ticker||!(r.shares>0)||(r.costKnown!==false&&!(r.buyPrice>0))||!(r.currentPrice>0)||!['CHF','EUR','USD','GBP'].includes(r.currency||'CHF'))throw new Error('Ungültige Position im Backup.');if(seen.has(r.ticker))throw new Error('Doppelter Ticker im Portfolio.');seen.add(r.ticker);if(r.costKnown===false)r.buyPrice=null;r.name=String(r.name||r.ticker);r.currency||='CHF';r.fees=Number(r.fees||0);r.assetClass=Object.hasOwn(RISK_WEIGHTS,r.assetClass)?r.assetClass:'Sonstiges';r.priceHistory=Array.isArray(r.priceHistory)?r.priceHistory.filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&Number.isFinite(x.price)&&x.price>0):[];}if(['transactions','dividends','snapshots','notes'].includes(k)&&!/^\d{4}-\d{2}-\d{2}$/.test(r.date||''))throw new Error('Ungültiges Datum im Backup.');for(const field of ['shares','buyPrice','currentPrice','price','amount','fee','fees','value'])if(r[field]!=null)r[field]=Number(r[field]);return r;});}
+      out.settings.investorProfile=PortfolioMath.profile(out.settings.investorProfile||{});
+      return out;
+    }
+
+    document.getElementById('globalSearch').addEventListener('input', renderGlobalSearch);
+    document.addEventListener('click', (e) => { if (!e.target.closest('.search-bar')) document.getElementById('searchDropdown').classList.remove('show'); });
+    document.addEventListener('keydown', e => { if(e.key==='Escape'){ closeMenu(); closeHistory(); } });
+    ['n_date', 't_date', 'd_date'].forEach(id => { const el = document.getElementById(id); if (el) el.value = today(); });
+
+    document.querySelectorAll('.nav-item').forEach(el=>{el.tabIndex=0;el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});});
+    document.querySelectorAll('.field').forEach(field=>{const label=field.querySelector('label'),input=field.querySelector('input,select');if(label&&input?.id)label.htmlFor=input.id;});
+    document.getElementById('globalSearch').setAttribute('aria-label','Aktien und Portfolio durchsuchen');
+    document.getElementById('holdingWizard').addEventListener('cancel',()=>{holdingWizardEpoch++;clearTimeout(holdingWizardTimer);});
+    window.onload = loadData;
+  </script>
+</body>
+</html>

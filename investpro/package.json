@@ -1,0 +1,13 @@
+{
+  "name": "investpro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "validate": "node scripts/validate-artifact.mjs",
+    "test": "node scripts/sync-ui.mjs --check && node tests/portfolio.mjs && node tests/regression.mjs",
+    "ui:sync": "node scripts/sync-ui.mjs",
+    "dev": "node scripts/dev.mjs"
+  }
+}
+
