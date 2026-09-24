@@ -56,6 +56,10 @@ Der Prüfserver bindet an http://localhost:3000. API-Aufrufe benötigen Internet
 - `npm run validate` scheiterte unter Node.js 20 (README-Mindestversion), weil `dist/server/index.js` ohne `package.json` als CommonJS geladen wurde. Das Artefakt wird jetzt wie im Kommentar vorgesehen über eine Data-URL als ES-Modul geprüft.
 - Neue Regressionstests in `tests/regression.mjs` decken alle Punkte ab (ausser Download-Verhalten, das einen echten Browser braucht; ein Chromium-Ladetest ohne Skriptfehler wurde manuell durchgeführt).
 
+## Hosting auf Render (Node.js)
+
+Zusätzlich zur Worker-Variante läuft dieselbe App als Node-Server: `npm start` (bindet an `0.0.0.0` und den Port aus `PORT`). Auf Render: New → Web Service → dieses Repository, Branch wählen, Root Directory `investpro`, Build Command leer bzw. `npm test`, Start Command `npm start`, Instance Type Free. Keine Umgebungsvariablen nötig; `FINNHUB_API_KEY` ist optional.
+
 ## Rechenmodell und Grenzen
 
 Die historischen Modellfenster verwenden **heutige Gewichte**, hypothetisches tägliches Rebalancing und datengleiche historische CHF-Wechselkurse. Sie rekonstruieren nicht den tatsächlichen früheren Besitz des Nutzers. Gebühren, Steuern und Zahlungsflüsse fehlen im Modell. Fenster überlappen und sind keine unabhängigen Stichproben. Künftige Kurse oder 99,9 % Genauigkeit werden nicht garantiert.

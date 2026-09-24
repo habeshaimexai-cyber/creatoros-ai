@@ -7,7 +7,10 @@
     "validate": "node scripts/validate-artifact.mjs",
     "test": "node scripts/sync-ui.mjs --check && node tests/portfolio.mjs && node tests/regression.mjs",
     "ui:sync": "node scripts/sync-ui.mjs",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "start": "node scripts/start.mjs"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
-
